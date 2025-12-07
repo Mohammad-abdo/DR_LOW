@@ -1,69 +1,110 @@
-# React + TypeScript + Vite
+# Green RX Dashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Modern React dashboard for Green RX Pharmacy Management System with authentication, animations, and backend integration.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- ✅ **Modern UI** - Built with Tailwind CSS and shadcn/ui components
+- ✅ **Smooth Animations** - Powered by Framer Motion
+- ✅ **Authentication** - JWT-based auth with admin-only access
+- ✅ **Protected Routes** - Role-based access control
+- ✅ **Responsive Design** - Works on desktop and mobile
+- ✅ **Backend Integration** - Connected to Green RX API
 
-## Expanding the ESLint configuration
+## Tech Stack
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- React 19 + TypeScript
+- Vite
+- Tailwind CSS v4
+- Framer Motion (animations)
+- React Router (routing)
+- Axios (API client)
+- shadcn/ui (components)
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Setup
 
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
+1. **Install dependencies:**
+   ```bash
+   npm install
+   ```
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+2. **Create `.env` file (optional):**
+   ```env
+   VITE_API_URL=http://localhost:5000/api
+   ```
+
+3. **Start development server:**
+   ```bash
+   npm run dev
+   ```
+
+4. **Open in browser:**
+   ```
+   http://localhost:5173
+   ```
+
+## Default Login
+
+- **Email:** `admin@greenrx.com`
+- **Password:** `admin123`
+
+## Project Structure
+
+```
+src/
+├── components/        # Reusable components
+│   ├── Layout.tsx     # Main layout with sidebar
+│   └── ProtectedRoute.tsx
+├── contexts/          # React contexts
+│   └── AuthContext.tsx
+├── lib/               # Utilities
+│   └── api.ts         # Axios API client
+├── pages/             # Page components
+│   ├── Login.tsx
+│   ├── Dashboard.tsx
+│   ├── Medicines.tsx
+│   └── ...
+└── App.tsx            # Main app component
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Backend Connection
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+The dashboard connects to the backend API at `http://localhost:5000/api` by default.
 
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+Make sure the backend server is running:
+```bash
+cd ../backend
+npm run dev
+```
+
+## Available Routes
+
+- `/login` - Login page
+- `/dashboard` - Main dashboard (admin only)
+- `/dashboard/medicines` - Medicines management
+- `/dashboard/patients` - Patients list
+- `/dashboard/doctors` - Doctors list
+- `/dashboard/prescriptions` - Prescriptions
+- `/dashboard/appointments` - Appointments
+- `/dashboard/lab-tests` - Lab tests
+- `/dashboard/orders` - Orders
+
+## Authentication
+
+- JWT tokens are stored in `localStorage`
+- Tokens are automatically added to API requests
+- 401 errors automatically redirect to login
+- Only admin users can access the dashboard
+
+## Development
+
+```bash
+# Development
+npm run dev
+
+# Build
+npm run build
+
+# Preview production build
+npm run preview
 ```

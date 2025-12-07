@@ -34,9 +34,26 @@ export default function StudentLogin() {
       // Force STUDENT role
       await login(email, password, "STUDENT");
       const user = JSON.parse(localStorage.getItem("auth_user"));
-      const userRole = user.role?.toUpperCase();
+      const userRole = (user.role || "").toUpperCase();
 
-      // Only allow STUDENT role
+      // Strict check - Only allow STUDENT role, reject ADMIN and TEACHER
+      if (userRole === "ADMIN" || userRole === "TEACHER") {
+        localStorage.removeItem("auth_token");
+        localStorage.removeItem("auth_user");
+        setError(
+          language === "ar"
+            ? "هذه الصفحة للطلاب فقط. يرجى استخدام صفحة تسجيل الدخول الخاصة بالمدراء."
+            : "This page is for students only. Please use the admin login page."
+        );
+        showToast.error(
+          language === "ar"
+            ? "غير مسموح لك بالدخول إلى هذه الصفحة"
+            : "You are not allowed to access this page"
+        );
+        setLoading(false);
+        return;
+      }
+
       if (userRole !== "STUDENT") {
         localStorage.removeItem("auth_token");
         localStorage.removeItem("auth_user");
@@ -76,7 +93,19 @@ export default function StudentLogin() {
     // Force light mode
     document.documentElement.classList.remove('dark');
     document.documentElement.classList.add('light');
-  }, []);
+    
+    // Redirect if already logged in
+    if (user) {
+      const userRole = (user.role || "").toUpperCase();
+      if (userRole === "ADMIN" || userRole === "TEACHER") {
+        // Admin/Teacher trying to access student login - redirect to admin login
+        navigate("/login", { replace: true });
+      } else if (userRole === "STUDENT") {
+        // Already logged in as student - redirect to dashboard
+        navigate("/dashboard", { replace: true });
+      }
+    }
+  }, [user, navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-white p-4">

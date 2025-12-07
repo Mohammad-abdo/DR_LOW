@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
@@ -19,9 +19,23 @@ export default function Login() {
   const [role, setRole] = useState("ADMIN");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const { t, language } = useLanguage();
   const navigate = useNavigate();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      const userRole = (user.role || "").toUpperCase();
+      if (userRole === "STUDENT") {
+        // Student trying to access admin login - redirect to student login
+        navigate("/student/login", { replace: true });
+      } else if (userRole === "ADMIN" || userRole === "TEACHER") {
+        // Already logged in as admin/teacher - redirect to dashboard
+        navigate("/admin/dashboard", { replace: true });
+      }
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -29,18 +43,40 @@ export default function Login() {
     setLoading(true);
 
     try {
+      // Only allow ADMIN or TEACHER roles from this login page
+      if (role === "STUDENT") {
+        setError(
+          language === "ar"
+            ? "هذه الصفحة للمدراء والمعلمين فقط. يرجى استخدام صفحة تسجيل الدخول الخاصة بالطلاب."
+            : "This page is for administrators and teachers only. Please use the student login page."
+        );
+        setLoading(false);
+        return;
+      }
+
       await login(email, password, role);
       const user = JSON.parse(localStorage.getItem("auth_user"));
-      console.log(user);
-      const userRole = user.role?.toUpperCase() || role;
+      const userRole = (user.role || role).toUpperCase();
+
+      // Strict role checking - reject students
+      if (userRole === "STUDENT") {
+        localStorage.removeItem("auth_token");
+        localStorage.removeItem("auth_user");
+        setError(
+          language === "ar"
+            ? "هذه الصفحة للمدراء والمعلمين فقط. يرجى استخدام صفحة تسجيل الدخول الخاصة بالطلاب."
+            : "This page is for administrators and teachers only. Please use the student login page."
+        );
+        setLoading(false);
+        return;
+      }
 
       if (userRole === "ADMIN" || userRole === "admin") {
         navigate("/admin/dashboard");
       } else if (userRole === "TEACHER" || userRole === "teacher") {
-        navigate("/admin/dashboard"); // Teachers can also access admin dashboard for now
-      } else if (userRole === "STUDENT" || userRole === "student") {
-        navigate("/dashboard");
+        navigate("/admin/dashboard");
       } else {
+        // Unknown role - redirect to appropriate page
         navigate("/admin/dashboard");
       }
     } catch (err) {
@@ -110,10 +146,12 @@ export default function Login() {
               {t('login.title')}
             </CardTitle>
             <CardDescription className="text-lg">
-              {t('login.subtitle')}
+              {language === 'ar' ? 'تسجيل دخول المدراء والمعلمين' : 'Admin & Teacher Login'}
             </CardDescription>
             <p className="text-sm text-muted-foreground mt-2">
-              {t('login.welcomeAdmin')}
+              {language === 'ar' 
+                ? 'هذه الصفحة للمدراء والمعلمين فقط'
+                : 'This page is for administrators and teachers only'}
             </p>
           </CardHeader>
           <CardContent>
@@ -193,8 +231,12 @@ export default function Login() {
                 >
                   <option value="ADMIN">{language === 'ar' ? 'مدير' : 'Admin'}</option>
                   <option value="TEACHER">{language === 'ar' ? 'معلم' : 'Teacher'}</option>
-                  <option value="STUDENT">{language === 'ar' ? 'طالب' : 'Student'}</option>
                 </select>
+                <p className="text-xs text-muted-foreground">
+                  {language === 'ar' 
+                    ? 'الطلاب: يرجى استخدام صفحة تسجيل الدخول الخاصة بالطلاب'
+                    : 'Students: Please use the student login page'}
+                </p>
               </motion.div>
 
               <motion.button
@@ -242,8 +284,12 @@ export default function Login() {
                 <div className="font-mono text-xs mt-2 space-y-1">
                   <p><strong>Admin:</strong> admin@lms.edu.kw / admin123</p>
                   <p><strong>Teacher:</strong> teacher@lms.edu.kw / teacher123</p>
-                  <p><strong>Student:</strong> student@lms.edu.kw / student123</p>
                 </div>
+                <p className="text-xs mt-2 text-primary">
+                  {language === 'ar' 
+                    ? 'الطلاب: استخدم /student/login'
+                    : 'Students: Use /student/login'}
+                </p>
               </div>
             </motion.div>
           </CardContent>

@@ -98,23 +98,37 @@ function AppRoutes() {
 
   return (
     <Routes>
-      {/* Admin/Teacher Login */}
+      {/* Admin/Teacher Login - Protected from students */}
       <Route
         path="/login"
-        element={user ? <Navigate to={getDefaultRoute()} replace /> : <Login />}
+        element={
+          user ? (
+            <Navigate to={getDefaultRoute()} replace />
+          ) : (
+            <Login />
+          )
+        }
       />
 
-      {/* Student Login/Register - Separate routes */}
+      {/* Student Login/Register - Protected from admins/teachers */}
       <Route
         path="/student/login"
         element={
-          user ? <Navigate to={getDefaultRoute()} replace /> : <StudentLogin />
+          user ? (
+            <Navigate to={getDefaultRoute()} replace />
+          ) : (
+            <StudentLogin />
+          )
         }
       />
       <Route
         path="/student/register"
         element={
-          user ? <Navigate to={getDefaultRoute()} replace /> : <Register />
+          user ? (
+            <Navigate to={getDefaultRoute()} replace />
+          ) : (
+            <Register />
+          )
         }
       />
 
@@ -476,11 +490,11 @@ function AppRoutes() {
         }
       />
 
-      {/* Student Routes */}
+      {/* Student Routes - STRICT: Only students allowed */}
       <Route
         path="/dashboard"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requireStudent>
             <StudentLayout>
               <StudentHome />
             </StudentLayout>
@@ -490,7 +504,7 @@ function AppRoutes() {
       <Route
         path="/dashboard/my-courses"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requireStudent>
             <StudentLayout>
               <MyCourses />
             </StudentLayout>
@@ -500,7 +514,7 @@ function AppRoutes() {
       <Route
         path="/dashboard/all-courses"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requireStudent>
             <StudentLayout>
               <AllCourses />
             </StudentLayout>
@@ -510,7 +524,7 @@ function AppRoutes() {
       <Route
         path="/dashboard/courses/:id"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requireStudent>
             <StudentLayout>
               <CourseDetail />
             </StudentLayout>
@@ -520,7 +534,7 @@ function AppRoutes() {
       <Route
         path="/dashboard/learning/:id"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requireStudent>
             <StudentLayout>
               <Learning />
             </StudentLayout>
@@ -530,7 +544,7 @@ function AppRoutes() {
       <Route
         path="/dashboard/profile"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requireStudent>
             <StudentLayout>
               <Profile />
             </StudentLayout>
@@ -540,7 +554,7 @@ function AppRoutes() {
       <Route
         path="/dashboard/help"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requireStudent>
             <StudentLayout>
               <Help />
             </StudentLayout>
@@ -550,7 +564,7 @@ function AppRoutes() {
       <Route
         path="/dashboard/share"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requireStudent>
             <StudentLayout>
               <Share />
             </StudentLayout>
@@ -560,7 +574,7 @@ function AppRoutes() {
       <Route
         path="/dashboard/wishlist"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requireStudent>
             <StudentLayout>
               <Wishlist />
             </StudentLayout>
@@ -570,7 +584,7 @@ function AppRoutes() {
       <Route
         path="/dashboard/cart"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requireStudent>
             <StudentLayout>
               <Cart />
             </StudentLayout>
@@ -580,7 +594,7 @@ function AppRoutes() {
       <Route
         path="/dashboard/payment"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requireStudent>
             <StudentLayout>
               <Payment />
             </StudentLayout>

@@ -2,7 +2,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-export const ProtectedRoute = ({ children, requireAdmin = false, requireDoctor = false, requireRepresentative = false, requireShop = false, requireDriver = false, requireCompany = false, requirePharmacy = false, allowedRoles = [] }) => {
+export const ProtectedRoute = ({ children, requireAdmin = false, requireStudent = false, requireDoctor = false, requireRepresentative = false, requireShop = false, requireDriver = false, requireCompany = false, requirePharmacy = false, allowedRoles = [] }) => {
   const { user, loading } = useAuth();
   const { language } = useLanguage();
 
@@ -41,12 +41,51 @@ export const ProtectedRoute = ({ children, requireAdmin = false, requireDoctor =
   const hasCompanyRole = userRole === 'company' || roleNames.includes('company');
   const hasPharmacyRole = userRole === 'pharmacy' || roleNames.includes('pharmacy');
 
-  if (requireAdmin && !hasAdminRole) {
+  if (requireAdmin && !hasAdminRole && !hasTeacherRole) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-destructive mb-2">Access Denied</h1>
-          <p className="text-muted-foreground">Only administrators can access this page.</p>
+        <div className="text-center p-6">
+          <h1 className="text-2xl font-bold text-destructive mb-2">
+            {language === "ar" ? "غير مسموح" : "Access Denied"}
+          </h1>
+          <p className="text-muted-foreground mb-4">
+            {language === "ar" 
+              ? "هذه الصفحة للمدراء والمعلمين فقط."
+              : "Only administrators and teachers can access this page."}
+          </p>
+          {hasStudentRole && (
+            <button
+              onClick={() => window.location.href = "/student/login"}
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+            >
+              {language === "ar" ? "تسجيل الدخول كطالب" : "Login as Student"}
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (requireStudent && !hasStudentRole) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="text-center p-6">
+          <h1 className="text-2xl font-bold text-destructive mb-2">
+            {language === "ar" ? "غير مسموح" : "Access Denied"}
+          </h1>
+          <p className="text-muted-foreground mb-4">
+            {language === "ar" 
+              ? "هذه الصفحة للطلاب فقط."
+              : "Only students can access this page."}
+          </p>
+          {(hasAdminRole || hasTeacherRole) && (
+            <button
+              onClick={() => window.location.href = "/login"}
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+            >
+              {language === "ar" ? "تسجيل الدخول كمدير" : "Login as Admin"}
+            </button>
+          )}
         </div>
       </div>
     );
@@ -119,21 +158,30 @@ export const ProtectedRoute = ({ children, requireAdmin = false, requireDoctor =
     );
   }
 
-  // Check if trying to access student routes - only students allowed
+  // Check if trying to access student routes - STRICT: only students allowed
   const currentPath = window.location.pathname;
   if ((currentPath.startsWith('/dashboard') || currentPath.startsWith('/student')) && !hasStudentRole) {
+    // Clear auth if admin/teacher tries to access student routes
     if (hasAdminRole || hasTeacherRole) {
+      localStorage.removeItem("auth_token");
+      localStorage.removeItem("auth_user");
       return (
         <div className="flex items-center justify-center min-h-screen bg-background">
-          <div className="text-center">
+          <div className="text-center p-6">
             <h1 className="text-2xl font-bold text-destructive mb-2">
               {language === "ar" ? "غير مسموح" : "Access Denied"}
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground mb-4">
               {language === "ar" 
-                ? "هذه الصفحة للطلاب فقط. يرجى استخدام صفحة تسجيل الدخول الخاصة بك."
-                : "This page is for students only. Please use your login page."}
+                ? "هذه الصفحة للطلاب فقط. يرجى استخدام صفحة تسجيل الدخول الخاصة بالمدراء."
+                : "This page is for students only. Please use the admin login page."}
             </p>
+            <button
+              onClick={() => window.location.href = "/login"}
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+            >
+              {language === "ar" ? "تسجيل الدخول كمدير" : "Login as Admin"}
+            </button>
           </div>
         </div>
       );
@@ -141,20 +189,29 @@ export const ProtectedRoute = ({ children, requireAdmin = false, requireDoctor =
     return <Navigate to="/student/login" replace />;
   }
 
-  // Check if trying to access admin routes - only admins/teachers allowed
+  // Check if trying to access admin routes - STRICT: only admins/teachers allowed
   if (currentPath.startsWith('/admin') && !hasAdminRole && !hasTeacherRole) {
+    // Clear auth if student tries to access admin routes
     if (hasStudentRole) {
+      localStorage.removeItem("auth_token");
+      localStorage.removeItem("auth_user");
       return (
         <div className="flex items-center justify-center min-h-screen bg-background">
-          <div className="text-center">
+          <div className="text-center p-6">
             <h1 className="text-2xl font-bold text-destructive mb-2">
               {language === "ar" ? "غير مسموح" : "Access Denied"}
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground mb-4">
               {language === "ar" 
-                ? "هذه الصفحة للمدراء فقط. يرجى استخدام صفحة تسجيل الدخول الخاصة بك."
-                : "This page is for administrators only. Please use your login page."}
+                ? "هذه الصفحة للمدراء والمعلمين فقط. يرجى استخدام صفحة تسجيل الدخول الخاصة بالطلاب."
+                : "This page is for administrators and teachers only. Please use the student login page."}
             </p>
+            <button
+              onClick={() => window.location.href = "/student/login"}
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+            >
+              {language === "ar" ? "تسجيل الدخول كطالب" : "Login as Student"}
+            </button>
           </div>
         </div>
       );

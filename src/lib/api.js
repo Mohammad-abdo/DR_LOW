@@ -1,8 +1,36 @@
 import axios from "axios";
 import { deduplicateRequest, retryRequest, withTimeout } from "./requestGuard.js";
 
-// Use environment variable for API URL, fallback to production URL
-const API_URL = import.meta.env.VITE_API_URL || "https://dr-law.developteam.site/api";
+// Production API URL - always use this in production
+const PRODUCTION_API_URL = "https://dr-law.developteam.site/api";
+
+// Use environment variable only if it's not localhost, otherwise force production URL
+const getApiUrl = () => {
+  const envUrl = import.meta.env.VITE_API_URL;
+  
+  // In production mode, always use production URL
+  if (import.meta.env.PROD) {
+    return PRODUCTION_API_URL;
+  }
+  
+  // In development, allow localhost if explicitly set
+  if (envUrl && (envUrl.includes('localhost') || envUrl.includes('127.0.0.1'))) {
+    return envUrl; // Allow localhost only in development
+  }
+  
+  // If env URL is set and not localhost, use it
+  if (envUrl && !envUrl.includes('localhost') && !envUrl.includes('127.0.0.1')) {
+    return envUrl;
+  }
+  
+  // Default to production URL
+  return PRODUCTION_API_URL;
+};
+
+const API_URL = getApiUrl();
+
+// Log API URL to help debug
+console.log('🔗 API URL:', API_URL, '(Mode:', import.meta.env.MODE + ')');
 
 const api = axios.create({
   baseURL: API_URL,

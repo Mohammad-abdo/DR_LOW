@@ -80,31 +80,16 @@ export default function AdminLayout({ children }) {
   useEffect(() => {
     const fetchQuickStats = async () => {
       try {
-        const [dashboardRes, notificationsRes] = await Promise.all([
+        const [dashboardRes, unreadCountRes] = await Promise.all([
           api.get("/admin/dashboard/stats").catch(() => ({ data: {} })),
-          api.get("/notifications?limit=10").catch(() => ({ data: {} })),
+          api.get("/notifications/unread-count").catch(() => ({ data: { data: { unreadCount: 0 } } })),
         ]);
 
         const dashboard = dashboardRes.data?.data || dashboardRes.data || {};
-        const notificationsData = extractDataFromResponse(notificationsRes);
+        const unreadCountData = extractDataFromResponse(unreadCountRes);
         
-        // Ensure notifications is an array
-        const notifications = Array.isArray(notificationsData) 
-          ? notificationsData 
-          : (notificationsData?.notifications || notificationsData?.data || []);
-
-        // Get unread count from response or calculate from notifications
-        let unreadNotifications = 0;
-        if (notificationsData?.unreadCount !== undefined) {
-          unreadNotifications = notificationsData.unreadCount;
-        } else if (notificationsData?.data?.unreadCount !== undefined) {
-          unreadNotifications = notificationsData.data.unreadCount;
-        } else if (Array.isArray(notifications)) {
-          unreadNotifications = notifications.filter((n) => {
-            const recipient = n.recipients?.[0];
-            return !recipient?.read && !n.read && !n.is_read;
-          }).length;
-        }
+        // Get unread count from lightweight endpoint
+        const unreadNotifications = unreadCountData?.data?.unreadCount || unreadCountData?.unreadCount || 0;
 
         setQuickStats({
           pendingPayments: 0, // Will be calculated from payments
@@ -123,7 +108,7 @@ export default function AdminLayout({ children }) {
     };
 
     fetchQuickStats();
-    const interval = setInterval(fetchQuickStats, 60000); // Update every 60 seconds (reduced frequency to prevent 429 errors)
+    const interval = setInterval(fetchQuickStats, 90000); // Update every 90 seconds (reduced frequency to prevent 429 errors)
     return () => clearInterval(interval);
   }, []);
 

@@ -62,11 +62,26 @@ export default function StudentLayout({ children }) {
 
   const fetchNotifications = async () => {
     try {
-      const response = await api.get("/notifications?limit=10");
-      const data = extractDataFromResponse(response);
-      const notificationsList = Array.isArray(data.notifications) ? data.notifications : [];
+      // Fetch both notifications and unread count
+      const [notificationsRes, unreadCountRes] = await Promise.all([
+        api.get("/notifications?limit=10").catch(() => ({ data: {} })),
+        api.get("/notifications/unread-count").catch(() => ({ data: { data: { unreadCount: 0 } } })),
+      ]);
+      
+      const notificationsData = extractDataFromResponse(notificationsRes);
+      const unreadCountData = extractDataFromResponse(unreadCountRes);
+      
+      const notificationsList = Array.isArray(notificationsData?.notifications) 
+        ? notificationsData.notifications 
+        : (Array.isArray(notificationsData?.data?.notifications) 
+          ? notificationsData.data.notifications 
+          : (Array.isArray(notificationsData) ? notificationsData : []));
+      
       setNotifications(notificationsList);
-      setUnreadCount(data.unreadCount || 0);
+      
+      // Get unread count from lightweight endpoint
+      const unreadCount = unreadCountData?.data?.unreadCount || unreadCountData?.unreadCount || 0;
+      setUnreadCount(unreadCount);
     } catch (error) {
       console.error("Error fetching notifications:", error);
     }

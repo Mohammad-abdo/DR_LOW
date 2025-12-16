@@ -38,7 +38,7 @@ const api = axios.create({
     "Content-Type": "application/json",
     Accept: "application/json",
   },
-  timeout: 30000, // 30 seconds timeout (reduced from 10 minutes for better error handling)
+  timeout: 300000, // 5 minutes timeout for large file uploads (videos can be up to 5GB)
 });
 
 api.interceptors.request.use(
@@ -50,6 +50,8 @@ api.interceptors.request.use(
     // Don't set Content-Type for FormData - let axios set it automatically with boundary
     if (config.data instanceof FormData) {
       delete config.headers["Content-Type"];
+      // Increase timeout for file uploads (especially videos)
+      config.timeout = 600000; // 10 minutes for large file uploads
     }
     return config;
   },

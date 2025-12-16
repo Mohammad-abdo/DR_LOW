@@ -37,7 +37,7 @@ export default function NotificationsDropdown() {
     // Initial fetch
     fetchData();
 
-    // Poll for new notifications every 60 seconds (increased to prevent 429 errors)
+    // Poll for new notifications every 90 seconds (reduced frequency to prevent 429 errors)
     interval = setInterval(() => {
       if (!isMounted) return;
       
@@ -45,7 +45,7 @@ export default function NotificationsDropdown() {
       if (isOpen) {
         fetchNotifications();
       }
-    }, 60000); // 60 seconds
+    }, 90000); // 90 seconds
 
     return () => {
       isMounted = false;
@@ -118,23 +118,17 @@ export default function NotificationsDropdown() {
 
   const fetchUnreadCount = async () => {
     try {
-      // Use profile notifications endpoint which returns unreadCount
-      const response = await api.get('/notifications?limit=1');
+      // Use lightweight unread count endpoint for polling
+      const response = await api.get('/notifications/unread-count');
       const data = extractDataFromResponse(response);
       
-      // Backend returns: { success: true, data: { notifications: [], unreadCount: 5 } }
+      // Backend returns: { success: true, data: { unreadCount: 5 } }
       if (data?.data?.unreadCount !== undefined) {
         setUnreadCount(data.data.unreadCount);
       } else if (data?.unreadCount !== undefined) {
         setUnreadCount(data.unreadCount);
       } else {
-        // Fallback: calculate from notifications list
-        const notificationsList = data?.data?.notifications || data?.notifications || [];
-        const unread = notificationsList.filter(n => {
-          const recipient = n.recipients?.[0];
-          return !recipient?.read && !n.read && !n.is_read;
-        }).length;
-        setUnreadCount(unread);
+        setUnreadCount(0);
       }
     } catch (error) {
       console.error('Error fetching unread count:', error);

@@ -1,8 +1,8 @@
 import axios from "axios";
 import { deduplicateRequest, retryRequest, withTimeout } from "./requestGuard.js";
 
-// Use environment variable for API URL, fallback to localhost for development
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5005/api";
+// Use environment variable for API URL, fallback to production URL
+const API_URL = import.meta.env.VITE_API_URL || "https://dr-law.developteam.site/api";
 
 const api = axios.create({
   baseURL: API_URL,

@@ -11,8 +11,8 @@ export const getImageUrl = (imagePath) => {
     return imagePath;
   }
   
-  // Prepend backend URL - use environment variable or fallback to localhost
-  const backendUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005';
+  // Prepend backend URL - use environment variable or fallback to production URL
+  const backendUrl = import.meta.env.VITE_API_BASE_URL || 'https://dr-law.developteam.site';
   return `${backendUrl}${imagePath}`;
 };
 
@@ -29,8 +29,8 @@ export const getVideoUrl = (videoPath) => {
     return videoPath;
   }
   
-  // Prepend backend URL - use environment variable or fallback to localhost
-  const backendUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005';
+  // Prepend backend URL - use environment variable or fallback to production URL
+  const backendUrl = import.meta.env.VITE_API_BASE_URL || 'https://dr-law.developteam.site';
   return `${backendUrl}${videoPath}`;
 };
 

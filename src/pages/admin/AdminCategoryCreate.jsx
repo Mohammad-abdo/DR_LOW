@@ -19,6 +19,7 @@ export default function AdminCategoryCreate() {
     descriptionAr: "",
     descriptionEn: "",
     image: null,
+    isBasic: false,
   });
 
   const handleSubmit = async (e) => {
@@ -30,6 +31,7 @@ export default function AdminCategoryCreate() {
       formDataToSend.append("nameEn", formData.nameEn);
       formDataToSend.append("descriptionAr", formData.descriptionAr);
       formDataToSend.append("descriptionEn", formData.descriptionEn);
+      formDataToSend.append("isBasic", formData.isBasic ? "true" : "false");
       if (formData.image) {
         formDataToSend.append("image", formData.image);
       }
@@ -132,6 +134,18 @@ export default function AdminCategoryCreate() {
                 accept="image/*"
                 onChange={(e) => setFormData((prev) => ({ ...prev, image: e.target.files[0] }))}
               />
+            </div>
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="isBasic"
+                checked={formData.isBasic}
+                onChange={(e) => setFormData((prev) => ({ ...prev, isBasic: e.target.checked }))}
+                className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+              />
+              <label htmlFor="isBasic" className="text-sm font-medium cursor-pointer">
+                {language === "ar" ? "فئة أساسية" : "Basic Category"}
+              </label>
             </div>
             <div className="flex items-center gap-2">
               <Button type="submit" disabled={loading}>

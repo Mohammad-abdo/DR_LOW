@@ -430,6 +430,79 @@ export default function CourseDetail() {
               );
             })()}
 
+            {/* Exams Section - Show exams if available */}
+            {course.exams && Array.isArray(course.exams) && course.exams.length > 0 && (
+              <Card className="border-0 shadow-lg">
+                <CardContent className="p-6 sm:p-8">
+                  <h3 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-gray-900">
+                    {language === "ar" ? "الامتحانات" : "Exams"}
+                  </h3>
+                  <div className="space-y-3 sm:space-y-4">
+                    {course.exams.map((exam) => {
+                      const hasResult = exam.results && exam.results.length > 0 && exam.results[0]?.submittedAt;
+                      const result = exam.results?.[0];
+                      
+                      return (
+                        <motion.div
+                          key={exam.id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (hasResult) {
+                              navigate(`/dashboard/exams/${exam.id}/result`);
+                            } else {
+                              navigate(`/dashboard/exams/${exam.id}`);
+                            }
+                          }}
+                          className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-gradient-to-r from-amber-50 to-amber-100 hover:from-amber-100 hover:to-amber-200 rounded-lg border-2 border-amber-200 hover:border-amber-300 transition-all cursor-pointer shadow-sm hover:shadow-md"
+                        >
+                          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center flex-shrink-0 bg-amber-500 text-white shadow-md">
+                            <Award className="w-5 h-5 sm:w-6 sm:h-6" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-sm sm:text-base text-gray-900 truncate">
+                              {language === "ar" ? exam.titleAr : exam.titleEn}
+                            </p>
+                            <div className="flex items-center gap-3 mt-1">
+                              <p className="text-xs sm:text-sm text-gray-600">
+                                {exam._count?.questions || 0} {language === "ar" ? "سؤال" : "questions"}
+                              </p>
+                              {exam.duration && (
+                                <p className="text-xs sm:text-sm text-gray-600">
+                                  <Clock className="w-3 h-3 inline mr-1" />
+                                  {exam.duration} {language === "ar" ? "دقيقة" : "min"}
+                                </p>
+                              )}
+                              {hasResult && result && (
+                                <p className={`text-xs sm:text-sm font-semibold ${
+                                  result.passed ? "text-green-600" : "text-red-600"
+                                }`}>
+                                  {result.percentage != null 
+                                    ? (typeof result.percentage === 'number' 
+                                        ? result.percentage.toFixed(1) 
+                                        : parseFloat(result.percentage)?.toFixed(1) || '0.0')
+                                    : '0.0'}%
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex-shrink-0">
+                            {hasResult ? (
+                              <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
+                            ) : (
+                              <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-amber-600" />
+                            )}
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Course Content Preview - Show all content from database */}
             {(() => {
               // Get all content from chapters and standalone content (all videos from database)
@@ -454,7 +527,7 @@ export default function CourseDetail() {
                 if (item.type === 'VIDEO' && item.videoUrl) {
                   // Skip hardcoded paths that don't include course ID
                   if (item.videoUrl.includes('/intro.mp4') && !item.videoUrl.includes(course.id)) {
-                    console.warn("⚠️ Filtering out hardcoded video path:", item.videoUrl);
+                    console.warn("⚠️ Skipping hardcoded intro video path:", item.videoUrl);
                     return false;
                   }
                 }

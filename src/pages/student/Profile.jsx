@@ -19,10 +19,12 @@ import {
   Lock,
   Camera,
   CreditCard,
+  UserCircle,
 } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import showToast from "@/lib/toast";
 import {
   Dialog,
@@ -47,6 +49,7 @@ export default function Profile() {
     year: "",
     semester: "",
     department: "",
+    gender: "",
     avatar: "",
   });
   const [avatarFile, setAvatarFile] = useState(null);
@@ -76,6 +79,7 @@ export default function Profile() {
         year: userData.year?.toString() || "",
         semester: userData.semester?.toString() || "",
         department: userData.department || "",
+        gender: userData.gender || "",
         avatar: userData.avatar || "",
       });
       if (userData.avatar) {
@@ -115,6 +119,7 @@ export default function Profile() {
       if (profile.year) formData.append("year", profile.year);
       if (profile.semester) formData.append("semester", profile.semester);
       if (profile.department) formData.append("department", profile.department);
+      if (profile.gender) formData.append("gender", profile.gender);
       if (avatarFile) {
         formData.append("avatar", avatarFile);
       }
@@ -359,7 +364,7 @@ export default function Profile() {
                 </div>
               </div>
 
-              <div className="sm:col-span-2">
+              <div>
                 <label className="block text-sm font-semibold mb-2 text-gray-700">
                   {language === "ar" ? "القسم" : "Department"}
                 </label>
@@ -372,6 +377,29 @@ export default function Profile() {
                     className="pl-10 h-11 sm:h-12 border-gray-200 focus:border-amber-500 focus:ring-amber-500"
                     placeholder={language === "ar" ? "علوم الحاسوب" : "Computer Science"}
                   />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold mb-2 text-gray-700">
+                  {language === "ar" ? "الجنس" : "Gender"}
+                </label>
+                <div className="relative">
+                  <UserCircle className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400 z-10" />
+                  <Select
+                    value={profile.gender}
+                    onValueChange={(value) => {
+                      setProfile({ ...profile, gender: value });
+                    }}
+                  >
+                    <SelectTrigger className="pl-10 h-11 sm:h-12 border-gray-200 focus:border-amber-500 focus:ring-amber-500">
+                      <SelectValue placeholder={language === "ar" ? "اختر الجنس" : "Select Gender"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="MALE">{language === "ar" ? "ذكر" : "Male"}</SelectItem>
+                      <SelectItem value="FEMALE">{language === "ar" ? "أنثى" : "Female"}</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </div>

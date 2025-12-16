@@ -23,6 +23,7 @@ import {
   Phone,
   MapPin,
   Search,
+  FileText,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import api from "@/lib/api";
@@ -109,7 +110,12 @@ export default function StudentLayout({ children }) {
       path: "/dashboard/all-courses",
       id: "all-courses",
     },
-
+    {
+      icon: FileText,
+      label: language === "ar" ? "الامتحانات" : "Exams",
+      path: "/dashboard/exams",
+      id: "exams",
+    },
     {
       icon: User,
       label: language === "ar" ? "الملف الشخصي" : "Profile",

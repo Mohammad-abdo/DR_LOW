@@ -93,3 +93,16 @@ After deployment:
 - Environment variables are encrypted and secure
 - Use `.env.local` for local development (not committed to git)
 
+
+
+
+
+
+
+
+
+
+
+
+
+

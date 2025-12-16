@@ -35,3 +35,16 @@ VITE_API_BASE_URL=https://your-backend-domain.com
 - Backend must be accessible from the internet
 - Images/videos will load from the backend URL you specify
 
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -33,3 +33,16 @@ Use GitHub Personal Access Token instead of password:
 2. Generate new token with `repo` permissions
 3. Use token as password when pushing
 
+
+
+
+
+
+
+
+
+
+
+
+
+

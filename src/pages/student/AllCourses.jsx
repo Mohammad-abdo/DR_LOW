@@ -57,11 +57,45 @@ export default function AllCourses() {
       setSearchQuery(urlSearch);
     }
     
-    fetchData();
-  }, [searchParams]);
+    let isMounted = true;
+    
+    const loadData = async () => {
+      if (!isMounted) return;
+      await fetchData();
+    };
+    
+    loadData();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [searchParams]); // Only re-run when searchParams changes
 
   useEffect(() => {
-    fetchCourses();
+    let isMounted = true;
+    let timeoutId = null;
+    
+    // Debounce fetchCourses to prevent too many requests
+    const debouncedFetch = () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      
+      timeoutId = setTimeout(() => {
+        if (isMounted) {
+          fetchCourses();
+        }
+      }, 500); // 500ms debounce
+    };
+    
+    debouncedFetch();
+    
+    return () => {
+      isMounted = false;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
   }, [selectedCategory, selectedTeacher, priceRange, durationRange, sortBy, searchQuery]);
 
   const fetchData = async () => {

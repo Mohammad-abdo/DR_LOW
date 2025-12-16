@@ -18,19 +18,42 @@ export default function NotificationsDropdown() {
   const dropdownRef = useRef(null);
 
   useEffect(() => {
-    fetchNotifications();
-    fetchUnreadCount();
+    let isMounted = true;
+    let interval = null;
 
-    // Poll for new notifications every 30 seconds
-    const interval = setInterval(() => {
+    const fetchData = async () => {
+      if (!isMounted) return;
+      
+      try {
+        await Promise.all([
+          fetchNotifications(),
+          fetchUnreadCount()
+        ]);
+      } catch (error) {
+        console.error('Error fetching notifications:', error);
+      }
+    };
+
+    // Initial fetch
+    fetchData();
+
+    // Poll for new notifications every 60 seconds (increased to prevent 429 errors)
+    interval = setInterval(() => {
+      if (!isMounted) return;
+      
       fetchUnreadCount();
       if (isOpen) {
         fetchNotifications();
       }
-    }, 50050);
+    }, 60000); // 60 seconds
 
-    return () => clearInterval(interval);
-  }, [isOpen]);
+    return () => {
+      isMounted = false;
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [isOpen]); // Only re-run when isOpen changes
 
   useEffect(() => {
     const handleClickOutside = (event) => {

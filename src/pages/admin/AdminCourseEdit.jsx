@@ -33,6 +33,9 @@ export default function AdminCourseEdit() {
     status: "DRAFT",
     coverImage: null,
     currentCoverImage: "",
+    isBasic: false,
+    isFeatured: false,
+    targetYear: "",
   });
 
   useEffect(() => {
@@ -79,6 +82,9 @@ export default function AdminCourseEdit() {
         status: course.status || "DRAFT",
         coverImage: null,
         currentCoverImage: course.coverImage || "",
+        isBasic: course.isBasic || false,
+        isFeatured: course.isFeatured || false,
+        targetYear: course.targetYear?.toString() || "",
       });
     } catch (error) {
       console.error("Error fetching course:", error);
@@ -104,6 +110,11 @@ export default function AdminCourseEdit() {
       formDataToSend.append("discount", formData.discount);
       formDataToSend.append("level", formData.level);
       formDataToSend.append("status", formData.status);
+      formDataToSend.append("isBasic", formData.isBasic ? "true" : "false");
+      formDataToSend.append("isFeatured", formData.isFeatured ? "true" : "false");
+      if (formData.targetYear) {
+        formDataToSend.append("targetYear", formData.targetYear);
+      }
       if (formData.coverImage) {
         formDataToSend.append("cover_image", formData.coverImage);
       }
@@ -312,6 +323,50 @@ export default function AdminCourseEdit() {
                 onChange={(e) => setFormData((prev) => ({ ...prev, coverImage: e.target.files[0] }))}
               />
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="isBasic"
+                  checked={formData.isBasic}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, isBasic: e.target.checked }))}
+                  className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                />
+                <label htmlFor="isBasic" className="text-sm font-medium">
+                  {language === "ar" ? "دورة أساسية" : "Basic Course"}
+                </label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="isFeatured"
+                  checked={formData.isFeatured}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, isFeatured: e.target.checked }))}
+                  className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                />
+                <label htmlFor="isFeatured" className="text-sm font-medium">
+                  {language === "ar" ? "كورس مشهور" : "Featured Course"}
+                </label>
+              </div>
+            </div>
+            {formData.isBasic && (
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  {language === "ar" ? "السنة الدراسية المستهدفة (اختياري)" : "Target Study Year (Optional)"}
+                </label>
+                <Input
+                  type="number"
+                  min="1"
+                  max="5"
+                  value={formData.targetYear}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, targetYear: e.target.value }))}
+                  placeholder={language === "ar" ? "مثال: 1, 2, 3..." : "e.g., 1, 2, 3..."}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  {language === "ar" ? "سيتم إظهار هذه الدورة للطلاب في هذه السنة الدراسية" : "This course will be shown to students in this study year"}
+                </p>
+              </div>
+            )}
             <div className="flex items-center gap-2">
               <Button type="submit" disabled={saving}>
                 {saving ? (

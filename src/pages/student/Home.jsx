@@ -150,7 +150,38 @@ export default function Home() {
     try {
       setLoading(true);
       
-      // Fetch banners from backend
+      let homeData = null;
+      
+      // Fetch home data (will include basic courses and popular courses if student has year)
+      try {
+        const homeRes = await api.get("/mobile/student/home");
+        homeData = extractDataFromResponse(homeRes);
+        
+        // Get basic courses from home data if available
+        if (homeData?.data?.basicCourses && homeData.data.basicCourses.length > 0) {
+          setBasicCourses(homeData.data.basicCourses);
+        }
+        
+        // Get popular courses from home data if available
+        if (homeData?.data?.popularCourses && homeData.data.popularCourses.length > 0) {
+          setPopularCourses(homeData.data.popularCourses);
+        }
+        
+        // Get categories from home data if available
+        if (homeData?.data?.categories && homeData.data.categories.length > 0) {
+          setCategories(homeData.data.categories.slice(0, 8));
+        }
+        
+        // Get banners from home data if available
+        if (homeData?.data?.banners && homeData.data.banners.length > 0) {
+          setBanners(homeData.data.banners);
+          setCurrentBannerIndex(0);
+        }
+      } catch (homeError) {
+        console.error("Error fetching home data:", homeError);
+      }
+
+      // Fetch banners from backend (fallback)
       try {
         const bannersRes = await api.get("/web/banners?active=true");
         console.log("📢 Full Banners Response:", bannersRes);
@@ -216,28 +247,32 @@ export default function Home() {
         setBanners([]);
       }
 
-      // Fetch all courses with ratings
+      // Fetch all courses with ratings (fallback)
       const coursesRes = await api.get("/mobile/student/courses?limit=50");
       const coursesData = extractDataFromResponse(coursesRes);
       const courses = Array.isArray(coursesData.courses) ? coursesData.courses : (Array.isArray(coursesData) ? coursesData : []);
 
       setAllCourses(courses);
       
-      // Basic courses (filter by category or level)
-      const basic = courses
-        .filter(c => c.level === "BEGINNER" || c.level === "BASIC" || c.category?.nameAr?.includes("أساسي") || c.category?.nameEn?.includes("Basic"))
-        .slice(0, 6);
-      setBasicCourses(basic);
+      // Basic courses (fallback - filter by category or level if not from home data)
+      if (!homeData?.data?.basicCourses || homeData.data.basicCourses.length === 0) {
+        const basic = courses
+          .filter(c => c.isBasic || c.level === "BEGINNER" || c.level === "BASIC" || c.category?.nameAr?.includes("أساسي") || c.category?.nameEn?.includes("Basic"))
+          .slice(0, 6);
+        setBasicCourses(basic);
+      }
 
-      // Most popular courses (by purchase count and rating)
-      const popular = [...courses]
-        .sort((a, b) => {
-          const aScore = (a._count?.purchases || 0) * 0.6 + (a.averageRating || 0) * 0.4;
-          const bScore = (b._count?.purchases || 0) * 0.6 + (b.averageRating || 0) * 0.4;
-          return bScore - aScore;
-        })
-        .slice(0, 6);
-      setPopularCourses(popular);
+      // Most popular courses (fallback - by purchase count and rating if not from home data)
+      if (!homeData?.data?.popularCourses || homeData.data.popularCourses.length === 0) {
+        const popular = [...courses]
+          .sort((a, b) => {
+            const aScore = (a._count?.purchases || 0) * 0.6 + (a.averageRating || 0) * 0.4;
+            const bScore = (b._count?.purchases || 0) * 0.6 + (b.averageRating || 0) * 0.4;
+            return bScore - aScore;
+          })
+          .slice(0, 6);
+        setPopularCourses(popular);
+      }
 
       // Fetch categories
       try {

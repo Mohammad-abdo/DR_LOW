@@ -1,4 +1,5 @@
 import axios from "axios";
+import { deduplicateRequest, retryRequest, withTimeout } from "./requestGuard.js";
 
 // Use environment variable for API URL, fallback to localhost for development
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5005/api";
@@ -9,7 +10,7 @@ const api = axios.create({
     "Content-Type": "application/json",
     Accept: "application/json",
   },
-  timeout: 600000, // 10 minutes timeout for large file uploads (videos)
+  timeout: 30000, // 30 seconds timeout (reduced from 10 minutes for better error handling)
 });
 
 api.interceptors.request.use(
@@ -31,24 +32,64 @@ api.interceptors.request.use(
 
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // Don't redirect if we're already on login page or if it's during token verification
-      const isLoginPage = window.location.pathname === "/login";
-      const isVerifyingToken = error.config?.url?.includes("/auth/me");
+  async (error) => {
+    const originalRequest = error.config;
 
-      // Clear auth data
-      localStorage.removeItem("auth_token");
-      localStorage.removeItem("auth_user");
-
-      // Only redirect if not on login page and not during token verification
-      // Token verification will be handled by AuthContext
-      if (!isLoginPage && !isVerifyingToken) {
-        window.location.href = "/login";
+    // Handle 429 (Too Many Requests) - rate limiting
+    if (error.response?.status === 429) {
+      const retryAfter = error.response.headers['retry-after'] || 2;
+      console.warn(`⚠️ Rate limit exceeded. Retrying after ${retryAfter} seconds...`);
+      
+      // Retry after delay
+      await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+      
+      // Retry the request (only once to prevent infinite loops)
+      if (!originalRequest._retry) {
+        originalRequest._retry = true;
+        return api.request(originalRequest);
       }
     }
+    
+    // Handle 401 (Unauthorized) - Token expired or invalid
+    if (error.response?.status === 401) {
+      const isLoginPage = window.location.pathname === "/login" || 
+                          window.location.pathname === "/student/login";
+      const isAuthEndpoint = originalRequest?.url?.includes("/auth/login") || 
+                            originalRequest?.url?.includes("/auth/register");
+      const isVerifyingToken = originalRequest?.url?.includes("/auth/me");
+
+      // Clear auth data on 401 errors
+      if (!isAuthEndpoint && !isLoginPage) {
+        localStorage.removeItem("auth_token");
+        localStorage.removeItem("auth_user");
+      }
+
+      // Redirect to login if not already there
+      if (!isLoginPage && !isVerifyingToken && !isAuthEndpoint) {
+        const isStudentRoute = window.location.pathname.startsWith("/dashboard");
+        const isAdminRoute = window.location.pathname.startsWith("/admin");
+        
+        if (isStudentRoute) {
+          window.location.href = "/student/login";
+        } else if (isAdminRoute) {
+          window.location.href = "/login";
+        } else {
+          window.location.href = "/login";
+        }
+      }
+    }
+    
     return Promise.reject(error);
   }
 );
+
+// Wrap API methods with deduplication for GET requests
+const originalGet = api.get;
+api.get = function(url, config = {}) {
+  return deduplicateRequest(
+    (cfg) => originalGet.call(this, url, cfg),
+    { method: 'GET', url, ...config }
+  );
+};
 
 export default api;

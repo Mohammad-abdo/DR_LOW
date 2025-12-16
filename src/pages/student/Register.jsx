@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -13,7 +13,8 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Mail, Lock, User, Phone, Calendar, GraduationCap, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { Mail, Lock, User, Phone, Calendar, GraduationCap, Loader2, AlertCircle, CheckCircle2, UserCircle } from "lucide-react";
 import showToast from "@/lib/toast";
 
 export default function StudentRegister() {
@@ -24,6 +25,7 @@ export default function StudentRegister() {
     phone: "",
     password: "",
     repeatPassword: "",
+    gender: "",
     year: "",
     semester: "",
     department: "",
@@ -71,6 +73,7 @@ export default function StudentRegister() {
         phone: formData.phone || undefined,
         password: formData.password,
         repeatPassword: formData.repeatPassword,
+        gender: formData.gender || undefined,
         year: formData.year ? parseInt(formData.year) : undefined,
         semester: formData.semester ? parseInt(formData.semester) : undefined,
         department: formData.department || undefined,
@@ -81,6 +84,23 @@ export default function StudentRegister() {
           language === "ar" ? "تم التسجيل بنجاح" : "Registration successful",
           language === "ar" ? "يمكنك الآن تسجيل الدخول" : "You can now login"
         );
+        
+        // If student provided year, show basic courses for that year
+        if (formData.year) {
+          try {
+            const basicCoursesRes = await api.get(`/mobile/student/courses/basic/by-year?year=${formData.year}`);
+            if (basicCoursesRes.data?.success && basicCoursesRes.data?.data?.courses?.length > 0) {
+              // Store basic courses in sessionStorage to show after login
+              sessionStorage.setItem('basicCoursesForYear', JSON.stringify({
+                year: formData.year,
+                courses: basicCoursesRes.data.data.courses,
+              }));
+            }
+          } catch (err) {
+            console.error("Error fetching basic courses:", err);
+          }
+        }
+        
         navigate("/student/login");
       }
     } catch (err) {
@@ -234,6 +254,35 @@ export default function StudentRegister() {
                     placeholder="+96512345678"
                     className="pl-10"
                   />
+                </div>
+              </motion.div>
+
+              {/* Gender */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.27 }}
+              >
+                <label className="block text-sm font-medium mb-2">
+                  {language === "ar" ? "الجنس" : "Gender"}
+                </label>
+                <div className="relative">
+                  <UserCircle className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground z-10" />
+                  <Select
+                    value={formData.gender}
+                    onValueChange={(value) => {
+                      setFormData({ ...formData, gender: value });
+                      setError("");
+                    }}
+                  >
+                    <SelectTrigger className="pl-10">
+                      <SelectValue placeholder={language === "ar" ? "اختر الجنس" : "Select Gender"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="MALE">{language === "ar" ? "ذكر" : "Male"}</SelectItem>
+                      <SelectItem value="FEMALE">{language === "ar" ? "أنثى" : "Female"}</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </motion.div>
 

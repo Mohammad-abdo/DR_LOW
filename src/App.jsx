@@ -20,6 +20,9 @@ import Share from "./pages/student/Share";
 import Wishlist from "./pages/student/Wishlist";
 import Cart from "./pages/student/Cart";
 import Payment from "./pages/student/Payment";
+import Exams from "./pages/student/Exams";
+import ExamDetail from "./pages/student/ExamDetail";
+import ExamResult from "./pages/student/ExamResult";
 
 // Admin Pages - LMS Only
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -597,6 +600,36 @@ function AppRoutes() {
           <ProtectedRoute requireStudent>
             <StudentLayout>
               <Payment />
+            </StudentLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/exams"
+        element={
+          <ProtectedRoute requireStudent>
+            <StudentLayout>
+              <Exams />
+            </StudentLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/exams/:id"
+        element={
+          <ProtectedRoute requireStudent>
+            <StudentLayout>
+              <ExamDetail />
+            </StudentLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/exams/:id/result"
+        element={
+          <ProtectedRoute requireStudent>
+            <StudentLayout>
+              <ExamResult />
             </StudentLayout>
           </ProtectedRoute>
         }

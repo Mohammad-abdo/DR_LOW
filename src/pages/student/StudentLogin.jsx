@@ -21,7 +21,7 @@ export default function StudentLogin() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const { language } = useLanguage();
   const navigate = useNavigate();
 

@@ -102,6 +102,8 @@ export default function Learning() {
       console.log("Course Data:", courseData);
       console.log("Course Content:", courseData.content);
       console.log("Course Chapters:", courseData.chapters);
+      console.log("Course Exams:", courseData.exams);
+      console.log("Exams Count:", courseData.exams?.length || 0);
       
       setCourse(courseData);
       
@@ -675,6 +677,76 @@ export default function Learning() {
                     </div>
                   </motion.div>
                 ))}
+
+                {/* Exams Section - Show at the end of content list */}
+                {course.exams && Array.isArray(course.exams) && course.exams.length > 0 && (
+                  <div className="mt-6 pt-6 border-t border-gray-200">
+                    <h4 className="text-sm font-semibold text-gray-900 mb-3">
+                      {language === "ar" ? "الامتحانات" : "Exams"}
+                    </h4>
+                    {course.exams.map((exam, examIndex) => {
+                      const hasResult = exam.results && exam.results.length > 0 && exam.results[0]?.submittedAt;
+                      const result = exam.results?.[0];
+                      
+                      return (
+                        <motion.div
+                          key={exam.id}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: examIndex * 0.05 }}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (hasResult) {
+                              navigate(`/dashboard/exams/${exam.id}/result`);
+                            } else {
+                              navigate(`/dashboard/exams/${exam.id}`);
+                            }
+                          }}
+                          className="p-3 sm:p-4 rounded-xl cursor-pointer transition-all duration-200 shadow-md bg-gradient-to-r from-amber-100 to-amber-200 hover:from-amber-200 hover:to-amber-300 border-2 border-amber-300 hover:shadow-lg mb-3"
+                        >
+                          <div className="flex items-center gap-2 sm:gap-3">
+                            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm bg-gradient-to-br from-amber-500 to-amber-700 text-white">
+                              <Award className="w-5 h-5 sm:w-6 sm:h-6" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-xs sm:text-sm line-clamp-2 text-gray-900">
+                                {language === "ar" ? exam.titleAr : exam.titleEn}
+                              </p>
+                              <div className="flex items-center gap-2 mt-1">
+                                <p className="text-xs text-gray-600">
+                                  {exam._count?.questions || 0} {language === "ar" ? "سؤال" : "questions"}
+                                </p>
+                                {exam.duration && (
+                                  <p className="text-xs text-gray-600">
+                                    <Clock className="w-3 h-3 inline mr-1" />
+                                    {exam.duration} {language === "ar" ? "دقيقة" : "min"}
+                                  </p>
+                                )}
+                                {hasResult && result && (
+                                  <p className={`text-xs font-semibold ${
+                                    result.passed ? "text-green-600" : "text-red-600"
+                                  }`}>
+                                    {result.percentage != null 
+                                      ? (typeof result.percentage === 'number' 
+                                          ? result.percentage.toFixed(1) 
+                                          : parseFloat(result.percentage)?.toFixed(1) || '0.0')
+                                      : '0.0'}%
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            {hasResult ? (
+                              <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 text-green-600" />
+                            ) : (
+                              <FileText className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 text-amber-600" />
+                            )}
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

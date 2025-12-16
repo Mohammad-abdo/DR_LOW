@@ -123,7 +123,7 @@ export default function AdminLayout({ children }) {
     };
 
     fetchQuickStats();
-    const interval = setInterval(fetchQuickStats, 30000); // Update every 30 seconds
+    const interval = setInterval(fetchQuickStats, 60000); // Update every 60 seconds (reduced frequency to prevent 429 errors)
     return () => clearInterval(interval);
   }, []);
 

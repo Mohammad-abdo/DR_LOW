@@ -43,6 +43,9 @@ import {
   Star,
   Image,
   Settings2,
+  Info,
+  HelpCircle,
+  Shield,
 } from "lucide-react";
 
 export default function AdminLayout({ children }) {
@@ -50,6 +53,7 @@ export default function AdminLayout({ children }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [quickStats, setQuickStats] = useState({
     pendingPayments: 0,
+    pendingCourseRequests: 0,
     unreadNotifications: 0,
     todayRevenue: 0,
   });
@@ -80,19 +84,23 @@ export default function AdminLayout({ children }) {
   useEffect(() => {
     const fetchQuickStats = async () => {
       try {
-        const [dashboardRes, unreadCountRes] = await Promise.all([
+        const [dashboardRes, unreadCountRes, courseRequestsRes] = await Promise.all([
           api.get("/admin/dashboard/stats").catch(() => ({ data: {} })),
           api.get("/notifications/unread-count").catch(() => ({ data: { data: { unreadCount: 0 } } })),
+          api.get("/admin/course-requests?status=pending").catch(() => ({ data: { requests: [], counts: {} } })),
         ]);
 
         const dashboard = dashboardRes.data?.data || dashboardRes.data || {};
         const unreadCountData = extractDataFromResponse(unreadCountRes);
+        const courseRequestsData = extractDataFromResponse(courseRequestsRes);
         
         // Get unread count from lightweight endpoint
         const unreadNotifications = unreadCountData?.data?.unreadCount || unreadCountData?.unreadCount || 0;
+        const pendingCourseRequests = courseRequestsData.counts?.pending || courseRequestsData.requests?.length || 0;
 
         setQuickStats({
           pendingPayments: 0, // Will be calculated from payments
+          pendingCourseRequests,
           unreadNotifications,
           todayRevenue: dashboard.stats?.totalRevenue || 0,
         });
@@ -101,6 +109,7 @@ export default function AdminLayout({ children }) {
         // Set default values on error
         setQuickStats({
           pendingPayments: 0,
+          pendingCourseRequests: 0,
           unreadNotifications: 0,
           todayRevenue: 0,
         });
@@ -266,12 +275,13 @@ export default function AdminLayout({ children }) {
                 {/* Quick Stats Cards */}
                 <motion.div
                   whileHover={{ scale: 1.05 }}
-                  onClick={() => navigate("/admin/payments?status=PENDING")}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-orange-500/10 border border-orange-500/20 cursor-pointer hover:bg-orange-500/20 transition-colors"
+                  onClick={() => navigate("/admin/course-requests?status=pending")}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-yellow-500/10 border border-yellow-500/20 cursor-pointer hover:bg-yellow-500/20 transition-colors"
                 >
-                  <AlertCircle className="w-4 h-4 text-orange-500" />
+                  <ClipboardList className="w-4 h-4 text-yellow-500" />
                   <span className="text-sm font-medium">
-                    {language === "ar" ? "مدفوعات معلقة" : "Pending Payments"}
+                    {quickStats.pendingCourseRequests}{" "}
+                    {language === "ar" ? "طلبات قيد الانتظار" : "Pending Requests"}
                   </span>
                 </motion.div>
 
@@ -519,10 +529,31 @@ function SidebarContent({
         },
       ],
     },
+    // Payments disabled - using course requests instead
+    // {
+    //   icon: CreditCard,
+    //   label: language === "ar" ? "المدفوعات" : "Payments",
+    //   path: "/admin/payments",
+    // },
     {
-      icon: CreditCard,
-      label: language === "ar" ? "المدفوعات" : "Payments",
-      path: "/admin/payments",
+      icon: ClipboardList,
+      label: language === "ar" ? "طلبات الدورات" : "Course Requests",
+      path: "/admin/course-requests",
+    },
+    {
+      icon: Upload,
+      label: language === "ar" ? "رفع الفيديوهات" : "Video Uploads",
+      path: "/admin/uploads",
+      children: [
+        {
+          label: language === "ar" ? "جميع الرفوعات" : "All Uploads",
+          path: "/admin/uploads",
+        },
+        {
+          label: language === "ar" ? "رفع فيديو جديد" : "Upload New Video",
+          path: "/admin/courses",
+        },
+      ],
     },
     {
       icon: Star,
@@ -553,6 +584,36 @@ function SidebarContent({
       icon: Settings,
       label: language === "ar" ? "الإعدادات" : "Settings",
       path: "/admin/settings",
+    },
+    {
+      icon: Info,
+      label: language === "ar" ? "معلومات التطبيق" : "About App",
+      path: "/admin/about-app",
+    },
+    {
+      icon: HelpCircle,
+      label: language === "ar" ? "المساعدة والدعم" : "Help & Support",
+      path: "/admin/help-support",
+    },
+    {
+      icon: FileText,
+      label: language === "ar" ? "سياسات التطبيق" : "App Policies",
+      path: "/admin/app-policies",
+    },
+    {
+      icon: Shield,
+      label: language === "ar" ? "الأدوار والصلاحيات" : "Roles & Permissions",
+      path: "/admin/roles",
+      children: [
+        {
+          label: language === "ar" ? "الأدوار" : "Roles",
+          path: "/admin/roles",
+        },
+        {
+          label: language === "ar" ? "الصلاحيات" : "Permissions",
+          path: "/admin/permissions",
+        },
+      ],
     },
   ];
 

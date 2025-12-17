@@ -2,7 +2,8 @@ import axios from "axios";
 import { deduplicateRequest, retryRequest, withTimeout } from "./requestGuard.js";
 
 // Production API URL - always use this in production
-const PRODUCTION_API_URL = "https://dr-law.developteam.site/api";
+const PRODUCTION_API_URL = "http://localhost:5005/api"; 
+// const PRODUCTION_API_URL = "https://dr-law.developteam.site/api";
 
 // Use environment variable only if it's not localhost, otherwise force production URL
 const getApiUrl = () => {
@@ -43,17 +44,22 @@ const api = axios.create({
 
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("auth_token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    try {
+      const token = localStorage.getItem("auth_token");
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+      // Don't set Content-Type for FormData - let axios set it automatically with boundary
+      if (config.data instanceof FormData) {
+        delete config.headers["Content-Type"];
+        // Increase timeout for file uploads (especially videos)
+        config.timeout = 600000; // 10 minutes for large file uploads
+      }
+      return config;
+    } catch (error) {
+      console.error("Error in request interceptor:", error);
+      return Promise.reject(error);
     }
-    // Don't set Content-Type for FormData - let axios set it automatically with boundary
-    if (config.data instanceof FormData) {
-      delete config.headers["Content-Type"];
-      // Increase timeout for file uploads (especially videos)
-      config.timeout = 600000; // 10 minutes for large file uploads
-    }
-    return config;
   },
   (error) => {
     return Promise.reject(error);
@@ -87,24 +93,32 @@ api.interceptors.response.use(
       const isAuthEndpoint = originalRequest?.url?.includes("/auth/login") || 
                             originalRequest?.url?.includes("/auth/register");
       const isVerifyingToken = originalRequest?.url?.includes("/auth/me");
+      const isRefreshToken = originalRequest?.url?.includes("/auth/refresh");
 
-      // Clear auth data on 401 errors
-      if (!isAuthEndpoint && !isLoginPage) {
-        localStorage.removeItem("auth_token");
-        localStorage.removeItem("auth_user");
-      }
-
-      // Redirect to login if not already there
-      if (!isLoginPage && !isVerifyingToken && !isAuthEndpoint) {
-        const isStudentRoute = window.location.pathname.startsWith("/dashboard");
-        const isAdminRoute = window.location.pathname.startsWith("/admin");
+      // Only clear auth data if it's a real authentication error (not during login/register)
+      // Don't clear on token verification failures - let the app handle it
+      if (!isAuthEndpoint && !isLoginPage && !isVerifyingToken && !isRefreshToken) {
+        // Check if error message indicates token expiration
+        const errorMessage = error.response?.data?.message || '';
+        const isTokenExpired = errorMessage.toLowerCase().includes('expired') || 
+                              errorMessage.toLowerCase().includes('invalid token');
         
-        if (isStudentRoute) {
-          window.location.href = "/student/login";
-        } else if (isAdminRoute) {
-          window.location.href = "/login";
-        } else {
-          window.location.href = "/login";
+        // Only clear and redirect if token is actually expired/invalid
+        if (isTokenExpired) {
+          localStorage.removeItem("auth_token");
+          localStorage.removeItem("auth_user");
+          
+          // Redirect to login if not already there
+          const isStudentRoute = window.location.pathname.startsWith("/dashboard");
+          const isAdminRoute = window.location.pathname.startsWith("/admin");
+          
+          if (isStudentRoute) {
+            window.location.href = "/student/login";
+          } else if (isAdminRoute) {
+            window.location.href = "/login";
+          } else {
+            window.location.href = "/login";
+          }
         }
       }
     }

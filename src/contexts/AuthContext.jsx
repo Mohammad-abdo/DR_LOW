@@ -112,11 +112,37 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem("auth_token");
-    localStorage.removeItem("auth_user");
-    setUser(null);
-    setToken(null);
+  const logout = async () => {
+    try {
+      // Clear state first to prevent any new requests
+      setUser(null);
+      setToken(null);
+      
+      // Clear all auth-related data from localStorage
+      localStorage.removeItem("auth_token");
+      localStorage.removeItem("auth_user");
+      
+      // Clear axios default headers if api is available
+      try {
+        if (api && api.defaults && api.defaults.headers) {
+          delete api.defaults.headers.common['Authorization'];
+        }
+      } catch (headerError) {
+        // Ignore errors when clearing headers
+        console.warn("Could not clear axios headers:", headerError);
+      }
+    } catch (error) {
+      console.error("Error during logout:", error);
+      // Force clear even if there's an error
+      try {
+        localStorage.removeItem("auth_token");
+        localStorage.removeItem("auth_user");
+        setUser(null);
+        setToken(null);
+      } catch (clearError) {
+        console.error("Critical error clearing auth data:", clearError);
+      }
+    }
   };
 
   const isAdmin = user?.role === "admin" || (user?.role_names && user.role_names.includes("admin"));

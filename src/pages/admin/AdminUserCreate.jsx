@@ -39,6 +39,7 @@ export default function AdminUserCreate() {
         phone: formData.phone,
         password: formData.password,
         ...(formData.role === "STUDENT" && {
+          repeatPassword: formData.password, // Required for student registration
           year: parseInt(formData.year) || undefined,
           semester: parseInt(formData.semester) || undefined,
         }),

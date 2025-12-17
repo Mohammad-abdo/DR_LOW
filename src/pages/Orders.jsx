@@ -27,9 +27,16 @@ export default function Orders() {
       const response = await api.get("/orders", {
         params: { ...params, limit: 1000 },
       });
-      setOrders(response.data.orders || []);
+      // Handle different response structures
+      const ordersData = response.data?.orders || response.data?.data?.orders || response.data?.data || [];
+      setOrders(Array.isArray(ordersData) ? ordersData : []);
     } catch (error) {
       console.error("Error fetching orders:", error);
+      // If endpoint doesn't exist (404/500), set empty array
+      if (error.response?.status === 404 || error.response?.status === 500) {
+        console.warn("Orders endpoint not available, setting empty array");
+        setOrders([]);
+      }
     } finally {
       setLoading(false);
     }
@@ -160,14 +167,14 @@ export default function Orders() {
                         {order.patient.user.lastName} (
                         {order.patient.user.email})
                       </p>
-                      {order.items.length > 0 && (
+                      {order.items && Array.isArray(order.items) && order.items.length > 0 && (
                         <div className="mt-2">
                           <p className="text-sm font-medium mb-1">Items:</p>
                           <ul className="text-sm text-muted-foreground list-disc list-inside">
                             {order.items.map((item, idx) => (
                               <li key={idx}>
-                                {item.medicine.name} - Qty: {item.quantity} ($
-                                {item.subtotal.toFixed(2)})
+                                {item?.medicine?.name || item?.name || 'Unknown'} - Qty: {item?.quantity || 0} ($
+                                {(item?.subtotal || 0).toFixed(2)})
                               </li>
                             ))}
                           </ul>

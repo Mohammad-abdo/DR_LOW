@@ -45,6 +45,8 @@ import AdminBannerDetail from "./pages/admin/AdminBannerDetail";
 import AdminBannerEdit from "./pages/admin/AdminBannerEdit";
 import AdminPayments from "./pages/admin/AdminPayments";
 import AdminPaymentDetail from "./pages/admin/AdminPaymentDetail";
+import AdminCourseRequests from "./pages/admin/AdminCourseRequests";
+import AdminUploads from "./pages/admin/AdminUploads";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminUserDetail from "./pages/admin/AdminUserDetail";
 import AdminUserCreate from "./pages/admin/AdminUserCreate";
@@ -58,6 +60,11 @@ import AdminReports from "./pages/admin/AdminReports";
 import AdminNotifications from "./pages/admin/AdminNotifications";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminProfile from "./pages/admin/AdminProfile";
+import AdminAboutApp from "./pages/admin/AdminAboutApp";
+import AdminHelpSupport from "./pages/admin/AdminHelpSupport";
+import AdminAppPolicies from "./pages/admin/AdminAppPolicies";
+import AdminRoles from "./pages/admin/AdminRoles";
+import AdminPermissions from "./pages/admin/AdminPermissions";
 
 function AppRoutes() {
   const { user, loading } = useAuth();
@@ -347,6 +354,30 @@ function AppRoutes() {
         }
       />
 
+      {/* Course Requests */}
+      <Route
+        path="/admin/course-requests"
+        element={
+          <ProtectedRoute requireAdmin>
+            <AdminLayout>
+              <AdminCourseRequests />
+            </AdminLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Video Uploads */}
+      <Route
+        path="/admin/uploads"
+        element={
+          <ProtectedRoute requireAdmin>
+            <AdminLayout>
+              <AdminUploads />
+            </AdminLayout>
+          </ProtectedRoute>
+        }
+      />
+
       {/* Users */}
       <Route
         path="/admin/users"
@@ -488,6 +519,64 @@ function AppRoutes() {
           <ProtectedRoute requireAdmin>
             <AdminLayout>
               <AdminProfile />
+            </AdminLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* About App */}
+      <Route
+        path="/admin/about-app"
+        element={
+          <ProtectedRoute requireAdmin>
+            <AdminLayout>
+              <AdminAboutApp />
+            </AdminLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Help & Support */}
+      <Route
+        path="/admin/help-support"
+        element={
+          <ProtectedRoute requireAdmin>
+            <AdminLayout>
+              <AdminHelpSupport />
+            </AdminLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* App Policies */}
+      <Route
+        path="/admin/app-policies"
+        element={
+          <ProtectedRoute requireAdmin>
+            <AdminLayout>
+              <AdminAppPolicies />
+            </AdminLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Roles & Permissions */}
+      <Route
+        path="/admin/roles"
+        element={
+          <ProtectedRoute requireAdmin>
+            <AdminLayout>
+              <AdminRoles />
+            </AdminLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/permissions"
+        element={
+          <ProtectedRoute requireAdmin>
+            <AdminLayout>
+              <AdminPermissions />
             </AdminLayout>
           </ProtectedRoute>
         }

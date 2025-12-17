@@ -24,6 +24,9 @@ import {
   MoreVertical,
   UserCog,
   Book,
+  ClipboardList,
+  Upload,
+  HardDrive,
 } from "lucide-react";
 import { getImageUrl } from "@/lib/imageHelper";
 import { Card } from "@/components/ui/card";
@@ -62,6 +65,9 @@ export default function AdminDashboard() {
     monthlyRevenue: 0,
     publishedCourses: 0,
     draftCourses: 0,
+    pendingCourseRequests: 0,
+    approvedCourseRequests: 0,
+    rejectedCourseRequests: 0,
   });
   const [chartData, setChartData] = useState([]);
   const [barChartData, setBarChartData] = useState([]);
@@ -70,6 +76,7 @@ export default function AdminDashboard() {
   const [topCourses, setTopCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState("7days");
+  const [courseRequestsData, setCourseRequestsData] = useState({ requests: [], counts: {} });
 
   useEffect(() => {
     fetchDashboardData();
@@ -85,39 +92,47 @@ export default function AdminDashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      const [dashboardRes, paymentsRes, usersRes, coursesRes] =
+      const [dashboardRes, paymentsRes, usersRes, coursesRes, courseRequestsRes] =
         await Promise.all([
           api.get("/admin/dashboard/stats").catch(() => ({ data: {} })),
           api.get("/admin/payments?limit=10").catch(() => ({ data: [] })),
           api.get("/admin/users?limit=10").catch(() => ({ data: [] })),
           api.get("/admin/courses?limit=10").catch(() => ({ data: [] })),
+          api.get("/admin/course-requests").catch(() => ({ data: { requests: [], counts: {} } })),
         ]);
 
       console.log("Dashboard API Response:", dashboardRes.data);
-      console.log("Payments API Response:", paymentsRes.data);
+      // Payments disabled
+      // console.log("Payments API Response:", paymentsRes.data);
       console.log("Users API Response:", usersRes.data);
       console.log("Courses API Response:", coursesRes.data);
 
       const dashboard = dashboardRes.data?.data || dashboardRes.data || {};
-      const paymentsData = extractDataFromResponse(paymentsRes);
+      // Payments disabled
+      // const paymentsData = extractDataFromResponse(paymentsRes);
       const usersData = extractDataFromResponse(usersRes);
       const coursesData = extractDataFromResponse(coursesRes);
+      const courseRequestsData = extractDataFromResponse(courseRequestsRes);
+      
+      // Store courseRequestsData in state
+      setCourseRequestsData(courseRequestsData);
 
-      console.log("Extracted Payments Data:", paymentsData);
+      // Payments disabled
+      // console.log("Extracted Payments Data:", paymentsData);
       console.log("Extracted Users Data:", usersData);
       console.log("Extracted Courses Data:", coursesData);
 
       const dashboardStats = dashboard.stats || {};
 
-      // Extract payments
-      let payments = [];
-      if (Array.isArray(paymentsData)) {
-        payments = paymentsData;
-      } else if (paymentsData.payments) {
-        payments = Array.isArray(paymentsData.payments)
-          ? paymentsData.payments
-          : [];
-      }
+      // Payments disabled - using course requests instead
+      // let payments = [];
+      // if (Array.isArray(paymentsData)) {
+      //   payments = paymentsData;
+      // } else if (paymentsData.payments) {
+      //   payments = Array.isArray(paymentsData.payments)
+      //     ? paymentsData.payments
+      //     : [];
+      // }
 
       // Extract users
       let users = [];
@@ -135,8 +150,9 @@ export default function AdminDashboard() {
         courses = Array.isArray(coursesData.courses) ? coursesData.courses : [];
       }
 
-      const recentPaymentsData =
-        dashboard.recentPayments || payments.slice(0, 5);
+      // Payments disabled
+      // const recentPaymentsData =
+      //   dashboard.recentPayments || payments.slice(0, 5);
       const topCoursesData = dashboard.topCourses || courses.slice(0, 5);
 
       // Filter users by role
@@ -147,45 +163,57 @@ export default function AdminDashboard() {
       const publishedCourses = courses.filter((c) => c.status === "PUBLISHED");
       const draftCourses = courses.filter((c) => c.status === "DRAFT");
 
-      // Filter payments by status
-      const pendingPayments = payments.filter((p) => p.status === "PENDING");
-      const completedPayments = payments.filter(
-        (p) => p.status === "COMPLETED"
-      );
+      // Payments disabled - using course requests instead
+      // const pendingPayments = payments.filter((p) => p.status === "PENDING");
+      // const completedPayments = payments.filter(
+      //   (p) => p.status === "COMPLETED"
+      // );
 
       const totalRevenueValue = dashboardStats.totalRevenue
         ? parseFloat(dashboardStats.totalRevenue)
-        : completedPayments.reduce(
-            (sum, p) => sum + parseFloat(p.amount || 0),
-            0
-          );
+        : 0; // Payments disabled
 
+      const courseRequestsCounts = courseRequestsData.counts || {};
+      
       setStats({
         totalStudents: dashboardStats.totalStudents || students.length || 0,
         totalTeachers: dashboardStats.totalTeachers || teachers.length || 0,
         totalCourses: dashboardStats.totalCourses || courses.length || 0,
         totalRevenue: totalRevenueValue,
         totalEnrollments:
-          dashboard.recentEnrollments?.length || completedPayments.length || 0,
-        pendingPayments: pendingPayments.length,
-        completedPayments: completedPayments.length,
+          dashboard.recentEnrollments?.length || 0, // Payments disabled
+        pendingPayments: 0, // Payments disabled
+        completedPayments: 0, // Payments disabled
         todayRevenue: 0, // Will be calculated from analytics
         monthlyRevenue: 0, // Will be calculated from analytics
         publishedCourses: publishedCourses.length,
         draftCourses: draftCourses.length,
+        pendingCourseRequests: courseRequestsCounts.pending || 0,
+        approvedCourseRequests: courseRequestsCounts.approved || 0,
+        rejectedCourseRequests: courseRequestsCounts.rejected || 0,
+        // Upload stats (calculated from course content)
+        totalUploads: courses.length || 0,
+        completedUploads: courses.filter(c => c.videoUrl).length || 0,
+        failedUploads: 0,
+        pendingUploads: 0,
       });
 
-      // Chart data for payment status
+      // Chart data - using course requests instead of payments
       setChartData([
         {
-          name: language === "ar" ? "مكتملة" : "Completed",
-          value: completedPayments.length,
+          name: language === "ar" ? "معتمدة" : "Approved",
+          value: courseRequestsCounts.approved || 0,
           color: "#10b981",
         },
         {
           name: language === "ar" ? "معلقة" : "Pending",
-          value: pendingPayments.length,
+          value: courseRequestsCounts.pending || 0,
           color: "#f59e0b",
+        },
+        {
+          name: language === "ar" ? "مرفوضة" : "Rejected",
+          value: courseRequestsCounts.rejected || 0,
+          color: "#ef4444",
         },
       ]);
 
@@ -205,16 +233,19 @@ export default function AdminDashboard() {
         },
       ]);
 
+      // Payments disabled - using course requests instead
       // Generate sales trend from payments
-      const allPayments = Array.isArray(paymentsData)
-        ? paymentsData
-        : paymentsData.payments || [];
-      const salesTrend = generateSalesTrendData(
-        allPayments,
-        selectedPeriod === "7days" ? 7 : selectedPeriod === "30days" ? 30 : 90
-      );
-      setSalesTrendData(salesTrend);
-      setRecentPayments(recentPaymentsData);
+      // const allPayments = Array.isArray(paymentsData)
+      //   ? paymentsData
+      //   : paymentsData.payments || [];
+      // const salesTrend = generateSalesTrendData(
+      //   allPayments,
+      //   selectedPeriod === "7days" ? 7 : selectedPeriod === "30days" ? 30 : 90
+      // );
+      // setSalesTrendData(salesTrend);
+      // setRecentPayments(recentPaymentsData);
+      setSalesTrendData([]);
+      setRecentPayments([]);
       setTopCourses(topCoursesData);
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
@@ -339,16 +370,49 @@ export default function AdminDashboard() {
       trendUp: true,
       subtitle: language === "ar" ? "إجمالي الاشتراكات" : "Total Enrollments",
     },
+    // Payments disabled - using course requests instead
+    // {
+    //   title: language === "ar" ? "مدفوعات معلقة" : "Pending Payments",
+    //   value: stats.pendingPayments,
+    //   icon: FileText,
+    //   color: "text-red-500",
+    //   bgColor: "bg-red-500/10",
+    //   borderColor: "border-red-500/20",
+    //   trend: stats.pendingPayments > 0 ? `${stats.pendingPayments}` : "0",
+    //   trendUp: false,
+    //   subtitle: language === "ar" ? "المدفوعات المعلقة" : "Pending Payments",
+    // },
     {
-      title: language === "ar" ? "مدفوعات معلقة" : "Pending Payments",
-      value: stats.pendingPayments,
-      icon: FileText,
-      color: "text-red-500",
-      bgColor: "bg-red-500/10",
-      borderColor: "border-red-500/20",
-      trend: stats.pendingPayments > 0 ? `${stats.pendingPayments}` : "0",
-      trendUp: false,
-      subtitle: language === "ar" ? "المدفوعات المعلقة" : "Pending Payments",
+      title: language === "ar" ? "طلبات الدورات" : "Course Requests",
+      value: stats.pendingCourseRequests,
+      icon: ClipboardList,
+      color: "text-blue-500",
+      bgColor: "bg-blue-500/10",
+      borderColor: "border-blue-500/20",
+      trend: `${stats.approvedCourseRequests} ${
+        language === "ar" ? "معتمد" : "Approved"
+      }`,
+      trendUp: true,
+      subtitle: `${stats.pendingCourseRequests} ${
+        language === "ar" ? "قيد الانتظار" : "Pending"
+      }`,
+      onClick: () => navigate("/admin/course-requests"),
+    },
+    {
+      title: language === "ar" ? "رفع الفيديوهات" : "Video Uploads",
+      value: stats.totalUploads || 0,
+      icon: Upload,
+      color: "text-purple-500",
+      bgColor: "bg-purple-500/10",
+      borderColor: "border-purple-500/20",
+      trend: `${stats.completedUploads || 0} ${
+        language === "ar" ? "مكتمل" : "Completed"
+      }`,
+      trendUp: true,
+      subtitle: `${stats.pendingUploads || 0} ${
+        language === "ar" ? "قيد المعالجة" : "In Progress"
+      }`,
+      onClick: () => navigate("/admin/uploads"),
     },
   ];
 
@@ -429,13 +493,16 @@ export default function AdminDashboard() {
               )
                 navigate("/admin/users");
               if (stat.title.includes("Courses")) navigate("/admin/courses");
-              if (
-                stat.title.includes("Revenue") ||
-                stat.title.includes("Payments")
-              )
-                navigate("/admin/payments");
-              if (stat.title.includes("Enrollments"))
-                navigate("/admin/payments");
+              // Payments disabled - using course requests instead
+              // if (
+              //   stat.title.includes("Revenue") ||
+              //   stat.title.includes("Payments")
+              // )
+              //   navigate("/admin/payments");
+              // if (stat.title.includes("Enrollments"))
+              //   navigate("/admin/payments");
+              if (stat.title.includes("Course Requests") || stat.title.includes("طلبات"))
+                navigate("/admin/course-requests");
             }}
           />
         ))}
@@ -642,15 +709,15 @@ export default function AdminDashboard() {
           <Card className="p-4 sm:p-6 hover:shadow-lg transition-shadow">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold flex items-center gap-2">
-                <Calendar className="w-5 h-5" />
+                <ClipboardList className="w-5 h-5" />
                 {language === "ar"
-                  ? "الاشتراكات الأخيرة"
-                  : "Recent Enrollments"}
+                  ? "طلبات الدورات المعلقة"
+                  : "Pending Course Requests"}
               </h2>
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate("/admin/payments")}
+                onClick={() => navigate("/admin/course-requests?status=pending")}
                 className="gap-2"
               >
                 {language === "ar" ? "عرض الكل" : "View All"}
@@ -659,68 +726,50 @@ export default function AdminDashboard() {
             </div>
             <div className="space-y-3">
               <AnimatePresence>
-                {recentPayments.length > 0 ? (
-                  recentPayments.slice(0, 5).map((payment, index) => (
+                {courseRequestsData.requests && courseRequestsData.requests.filter(r => r.status === 'pending').length > 0 ? (
+                  courseRequestsData.requests.filter(r => r.status === 'pending').slice(0, 5).map((request, index) => (
                     <motion.div
-                      key={payment.id}
+                      key={request.id}
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: 20 }}
                       transition={{ delay: index * 0.1 }}
                       whileHover={{ scale: 1.02, x: 4 }}
                       className="p-3 border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer"
-                      onClick={() => navigate(`/admin/payments/${payment.id}`)}
+                      onClick={() => navigate("/admin/course-requests")}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
                             <p className="font-semibold">
-                              {payment.student?.nameEn ||
-                                payment.student?.nameAr ||
+                              {request.student?.nameEn ||
+                                request.student?.nameAr ||
                                 "Student"}
                             </p>
-                            <span
-                              className={`px-2 py-0.5 rounded-full text-xs ${
-                                payment.status === "COMPLETED"
-                                  ? "bg-green-100 text-green-800"
-                                  : "bg-yellow-100 text-yellow-800"
-                              }`}
-                            >
-                              {payment.status || "PENDING"}
+                            <span className="px-2 py-0.5 rounded-full text-xs bg-yellow-100 text-yellow-800">
+                              {language === "ar" ? "قيد الانتظار" : "PENDING"}
                             </span>
                           </div>
                           <p className="text-sm text-muted-foreground">
-                            {payment.course?.titleEn ||
-                              payment.course?.titleAr ||
+                            {request.course?.titleEn ||
+                              request.course?.titleAr ||
                               "Course"}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {payment.createdAt
-                              ? format(new Date(payment.createdAt), "PPp")
+                            {request.createdAt
+                              ? format(new Date(request.createdAt), "PPp")
                               : "-"}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-bold text-green-600">
-                            {parseFloat(payment.amount || 0).toFixed(2)} KWD
                           </p>
                         </div>
                       </div>
                     </motion.div>
                   ))
                 ) : (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="text-center py-8 text-muted-foreground"
-                  >
-                    <Calendar className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                    <p>
-                      {language === "ar"
-                        ? "لا توجد اشتراكات"
-                        : "No enrollments yet"}
-                    </p>
-                  </motion.div>
+                  <div className="text-center py-8 text-muted-foreground">
+                    {language === "ar" 
+                      ? "لا توجد طلبات معلقة" 
+                      : "No pending requests"}
+                  </div>
                 )}
               </AnimatePresence>
             </div>
@@ -858,20 +907,21 @@ export default function AdminDashboard() {
               </motion.div>
               <motion.div
                 whileHover={{ scale: 1.05 }}
-                className="p-3 sm:p-4 bg-gradient-to-br from-orange-500/10 to-orange-600/10 rounded-lg border border-orange-500/20"
+                onClick={() => navigate("/admin/course-requests?status=pending")}
+                className="p-3 sm:p-4 bg-gradient-to-br from-purple-500/10 to-purple-600/10 rounded-lg border border-purple-500/20 cursor-pointer"
               >
                 <p className="text-xs sm:text-sm text-muted-foreground">
-                  {language === "ar" ? "مدفوعات معلقة" : "Pending Payments"}
+                  {language === "ar" ? "طلبات دورات معلقة" : "Pending Course Requests"}
                 </p>
-                <p className="text-xl sm:text-2xl font-bold text-orange-600">
-                  {stats.pendingPayments}
+                <p className="text-xl sm:text-2xl font-bold text-purple-600">
+                  {stats.pendingCourseRequests}
                 </p>
               </motion.div>
             </div>
           </Card>
         </motion.div>
 
-        {/* Alerts & Notifications */}
+        {/* Alerts & Notifications - Using Course Requests instead of Payments */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -883,7 +933,7 @@ export default function AdminDashboard() {
               {language === "ar" ? "التنبيهات" : "Alerts"}
             </h2>
             <div className="space-y-3">
-              {stats.pendingPayments > 0 && (
+              {stats.pendingCourseRequests > 0 && (
                 <motion.div
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -892,23 +942,23 @@ export default function AdminDashboard() {
                   <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0" />
                   <div className="flex-1">
                     <p className="font-medium text-sm">
-                      {stats.pendingPayments}{" "}
+                      {stats.pendingCourseRequests}{" "}
                       {language === "ar"
-                        ? "مدفوعات معلقة تحتاج إلى المراجعة"
-                        : "pending payments need review"}
+                        ? "طلبات دورات معلقة تحتاج إلى المراجعة"
+                        : "pending course requests need review"}
                     </p>
                     <Button
                       variant="link"
                       size="sm"
-                      onClick={() => navigate("/admin/payments")}
+                      onClick={() => navigate("/admin/course-requests?status=pending")}
                       className="p-0 h-auto mt-1"
                     >
-                      {language === "ar" ? "عرض المدفوعات" : "View Payments"}
+                      {language === "ar" ? "عرض الطلبات" : "View Requests"}
                     </Button>
                   </div>
                 </motion.div>
               )}
-              {stats.pendingPayments === 0 && (
+              {stats.pendingCourseRequests === 0 && (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}

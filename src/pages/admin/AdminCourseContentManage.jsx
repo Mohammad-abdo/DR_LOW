@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Plus, Edit, Trash2, Save, Loader2, Video, FileText, X, ClipboardList } from "lucide-react";
 import { getImageUrl } from "@/lib/imageHelper";
 import showToast from "@/lib/toast";
+import DropzoneVideoUpload from "@/components/DropzoneVideoUpload";
 
 export default function AdminCourseContentManage() {
   const { courseId } = useParams();
@@ -38,6 +39,7 @@ export default function AdminCourseContentManage() {
   const [fileFile, setFileFile] = useState(null);
   const [videoPreview, setVideoPreview] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [uploadedVideoUrl, setUploadedVideoUrl] = useState(null);
 
   useEffect(() => {
     fetchContent();
@@ -157,6 +159,19 @@ export default function AdminCourseContentManage() {
     }
   };
 
+  const handleDropzoneUploadComplete = (data, file) => {
+    console.log("Dropzone upload complete:", data);
+    if (data.videoUrl) {
+      setUploadedVideoUrl(data.videoUrl);
+      showToast.success(language === "ar" ? "تم رفع الفيديو بنجاح" : "Video uploaded successfully");
+    }
+  };
+
+  const handleDropzoneUploadError = (error, file) => {
+    console.error("Dropzone upload error:", error);
+    showToast.error(error.message || (language === "ar" ? "خطأ في رفع الفيديو" : "Error uploading video"));
+  };
+
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -182,7 +197,10 @@ export default function AdminCourseContentManage() {
       formDataToSend.append("chapterId", formData.chapterId || "");
       formDataToSend.append("isIntroVideo", formData.isIntroVideo.toString());
       
-      if (videoFile) {
+      // Use uploaded video URL from Dropzone if available, otherwise use traditional upload
+      if (uploadedVideoUrl) {
+        formDataToSend.append("videoUrl", uploadedVideoUrl);
+      } else if (videoFile) {
         formDataToSend.append("video", videoFile);
       }
       if (fileFile) {
@@ -272,6 +290,7 @@ export default function AdminCourseContentManage() {
     setVideoFile(null);
     setFileFile(null);
     setVideoPreview(null);
+    setUploadedVideoUrl(null);
     setEditingId(null);
     setShowForm(false);
   };
@@ -389,15 +408,36 @@ export default function AdminCourseContentManage() {
                   <label className="block text-sm font-medium mb-2">
                     {language === "ar" ? "فيديو" : "Video File"}
                   </label>
-                  <input
-                    type="file"
-                    accept="video/*"
-                    onChange={handleVideoChange}
-                    className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/90"
+                  
+                  {/* Dropzone for large video uploads */}
+                  <DropzoneVideoUpload
+                    courseId={courseId}
+                    contentId={editingId}
+                    onUploadComplete={handleDropzoneUploadComplete}
+                    onUploadError={handleDropzoneUploadError}
                   />
-                  {videoPreview && (
-                    <div className="mt-2">
-                      <video src={videoPreview} controls className="w-full max-w-md rounded" />
+
+                  {/* Fallback: Traditional file input for small videos */}
+                  <div className="mt-4">
+                    <p className="text-xs text-muted-foreground mb-2">
+                      {language === "ar" ? "أو استخدم الرفع التقليدي للفيديوهات الصغيرة" : "Or use traditional upload for small videos"}
+                    </p>
+                    <input
+                      type="file"
+                      accept="video/*"
+                      onChange={handleVideoChange}
+                      className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/90"
+                    />
+                    {videoPreview && (
+                      <div className="mt-2">
+                        <video src={videoPreview} controls className="w-full max-w-md rounded" />
+                      </div>
+                    )}
+                  </div>
+
+                  {uploadedVideoUrl && (
+                    <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm text-green-700">
+                      {language === "ar" ? "تم رفع الفيديو بنجاح" : "Video uploaded successfully"}
                     </div>
                   )}
                 </div>

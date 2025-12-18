@@ -1,342 +1,309 @@
-import { useEffect, useRef, useState } from "react";
-import Dropzone from "dropzone";
-import "dropzone/dist/dropzone.css";
-import { Upload, X, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
-import { useLanguage } from "@/contexts/LanguageContext";
-import api from "@/lib/api";
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+import http from "http";
+import path from "path";
+import { fileURLToPath } from "url";
+import os from "os";
 
-export default function DropzoneVideoUpload({ onUploadComplete, onUploadError, courseId, contentId }) {
-  const { language } = useLanguage();
-  const dropzoneRef = useRef(null);
-  const dropzoneInstanceRef = useRef(null);
-  const tokenRefreshIntervalRef = useRef(null);
-  const [uploadProgress, setUploadProgress] = useState({});
-  const [uploadStatus, setUploadStatus] = useState({}); // 'uploading', 'success', 'error'
+// Import middlewares
+import { errorHandler, notFoundHandler } from "./middlewares/errorHandler.js";
+import { apiLimiter, authLimiter, notificationLimiter } from "./middlewares/rateLimiter.js";
+import { duplicateRequestGuard, rateLimitGuard, requestSizeGuard, requestTimeoutGuard } from "./middlewares/requestGuard.js";
 
-  // Function to refresh auth token
-  const refreshAuthToken = async () => {
-    try {
-      const currentToken = localStorage.getItem("auth_token") || localStorage.getItem("token");
-      if (!currentToken) return null;
+// Import Swagger
+import swaggerUi from "swagger-ui-express";
+import swaggerJsdoc from "swagger-jsdoc";
 
-      const response = await api.post('/auth/refresh-token', {}, {
-        headers: { Authorization: `Bearer ${currentToken}` }
-      });
+// Import routes
+import adminRoutes from "./routes/admin/index.js";
+import studentMobileRoutes from "./routes/mobile/student/index.js";
+import teacherMobileRoutes from "./routes/mobile/teacher/index.js";
+import adminMobileRoutes from "./routes/mobile/admin/index.js";
+import publicMobileRoutes from "./routes/mobile/public/index.js";
+import webRoutes from "./routes/web/index.js";
+import authRoutes from "./routes/auth.js";
+import profileRoutes from "./routes/profile.js";
+import videoUploadRoutes from "./routes/admin/video-upload.js"; // New video upload route
 
-      if (response.data.success && response.data.token) {
-        localStorage.setItem("auth_token", response.data.token);
-        localStorage.setItem("token", response.data.token);
-        console.log("✅ Token refreshed successfully");
-        return response.data.token;
-      }
-      return null;
-    } catch (error) {
-      console.error("❌ Token refresh failed:", error);
-      return null;
-    }
-  };
+dotenv.config();
 
-  // Update dropzone headers with new token
-  const updateDropzoneToken = (newToken) => {
-    if (dropzoneInstanceRef.current && newToken) {
-      dropzoneInstanceRef.current.options.headers = {
-        ...dropzoneInstanceRef.current.options.headers,
-        Authorization: `Bearer ${newToken}`
-      };
-      console.log("🔄 Dropzone token updated");
-    }
-  };
+const app = express();
+const PORT = process.env.PORT || 5005;
 
-  useEffect(() => {
-    if (!dropzoneRef.current) return;
+// Debug: Log the port being used
+console.log("🔍 Environment PORT:", process.env.PORT);
+console.log("🔍 Final PORT:", PORT);
 
-    const baseUrl = api?.defaults?.baseURL || (import.meta.env.VITE_API_URL || 'https://dr-law.developteam.site/api');
-    const authToken = localStorage.getItem("auth_token") || localStorage.getItem("token");
-
-    // Initialize Dropzone
-    const dropzone = new Dropzone(dropzoneRef.current, {
-      url: `${baseUrl}/admin/upload/video-chunk`,
-      method: "post",
-      paramName: "chunk",
-      chunking: true,
-      // Bigger chunks => fewer HTTP requests => faster uploads for small/medium videos
-      // Keep under backend safety limit (50MB per chunk)
-      chunkSize: 50 * 1024 * 1024, // 50MB chunks
-      retryChunks: true,
-      retryChunksLimit: 5, // Increased from 3 to 5
-      // Parallel chunk uploads can overload some hosts/proxies and trigger throttling.
-      // Sequential uploads are typically more stable (especially behind reverse proxies).
-      parallelChunkUploads: false,
-      maxFilesize: 10 * 1024 * 1024 * 1024, // 10GB max (in KB: 10,485,760)
-      acceptedFiles: "video/*",
-      addRemoveLinks: false,
-      autoProcessQueue: true,
-      timeout: 0, // No timeout for large uploads
-      maxFiles: 1,
-      dictDefaultMessage: language === "ar" 
-        ? "اسحب الفيديو هنا أو اضغط للاختيار" 
-        : "Drop video here or click to select",
-      dictFallbackMessage: language === "ar"
-        ? "المتصفح الخاص بك لا يدعم رفع الملفات بالسحب والإفلات"
-        : "Your browser does not support drag'n'drop file uploads",
-      dictInvalidFileType: language === "ar"
-        ? "نوع الملف غير مدعوم. يرجى اختيار ملف فيديو"
-        : "Invalid file type. Please select a video file",
-      dictFileTooBig: language === "ar"
-        ? "الملف كبير جداً ({{filesize}}MB). الحد الأقصى: {{maxFilesize}}MB"
-        : "File is too big ({{filesize}}MB). Max filesize: {{maxFilesize}}MB",
-      dictResponseError: language === "ar"
-        ? "حدث خطأ أثناء الرفع"
-        : "An error occurred while uploading",
-      headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
-      params: {
-        courseId: courseId || "",
-        contentId: contentId || "",
+// Swagger configuration
+const swaggerOptions = {
+  definition: {
+    openapi: "3.0.0",
+    info: {
+      title: "LMS API Documentation",
+      version: "1.0.0",
+      description: "Learning Management System API for University in Kuwait",
+      contact: {
+        name: "API Support",
       },
-    });
+    },
+    servers: [
+      {
+        url: `http://localhost:${PORT}`,
+        description: "Development server",
+      },
+    ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT",
+        },
+      },
+    },
+  },
+  apis: ["./src/routes/**/*.js"],
+};
 
-    // Event handlers
-    dropzone.on("addedfile", (file) => {
-      console.log("📹 File added:", file.name, "Size:", (file.size / 1024 / 1024).toFixed(2), "MB");
-      setUploadStatus({ [file.name]: "uploading" });
-      setUploadProgress({ [file.name]: 0 });
-      
-      // Remove any previously added files
-      if (dropzone.files.length > 1) {
-        dropzone.removeFile(dropzone.files[0]);
+const swaggerSpec = swaggerJsdoc(swaggerOptions);
+
+// CORS Configuration
+const rawAllowedOrigins = (process.env.FRONTEND_URL || "http://localhost:5173||https://dr-low.vercel.app")
+  .split("||")
+  .map((url) => url.trim())
+  .filter((url) => url);
+
+rawAllowedOrigins.push("https://dr-low.vercel.app");
+
+const allowedHostnames = new Set(
+  rawAllowedOrigins
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .map((entry) => {
+      try {
+        const normalized = entry.includes("://") ? entry : `https://${entry}`;
+        return new URL(normalized).hostname.toLowerCase();
+      } catch {
+        return null;
       }
+    })
+    .filter(Boolean)
+);
 
-      // Start token refresh interval (refresh every 45 minutes)
-      if (tokenRefreshIntervalRef.current) {
-        clearInterval(tokenRefreshIntervalRef.current);
-      }
-      tokenRefreshIntervalRef.current = setInterval(async () => {
-        console.log("🔄 Auto-refreshing token during upload...");
-        const newToken = await refreshAuthToken();
-        if (newToken) {
-          updateDropzoneToken(newToken);
-        }
-      }, 45 * 60 * 1000); // 45 minutes
-    });
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
 
-    dropzone.on("uploadprogress", (file, progress, bytesSent) => {
-      setUploadProgress((prev) => ({
-        ...prev,
-        [file.name]: Math.round(progress),
-      }));
-    });
-
-    dropzone.on("chunkuploaded", (file, chunk, response) => {
-      console.log(`✅ Chunk ${chunk.index + 1} uploaded for ${file.name}`);
-    });
-
-    dropzone.on("success", (file, response) => {
-      console.log("🎉 Upload completed successfully:", file.name);
-      
-      // Clear token refresh interval
-      if (tokenRefreshIntervalRef.current) {
-        clearInterval(tokenRefreshIntervalRef.current);
-        tokenRefreshIntervalRef.current = null;
-      }
+      const isLocalNetwork = /^(http:\/\/)?(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.)/.test(origin);
 
       try {
-        const data = typeof response === "string" ? JSON.parse(response) : response;
-        setUploadStatus({ [file.name]: "success" });
-        if (onUploadComplete) {
-          onUploadComplete(data, file);
-        }
-      } catch (error) {
-        console.error("❌ Error parsing upload response:", error);
-        setUploadStatus({ [file.name]: "error" });
-        if (onUploadError) {
-          onUploadError(error, file);
-        }
-      }
-    });
-
-    dropzone.on("error", async (file, errorMessage, xhr) => {
-      console.error("❌ Upload error:", errorMessage, xhr);
-      
-      // Check if it's an authentication error (401)
-      if (xhr && xhr.status === 401) {
-        console.log("🔐 Authentication error detected, attempting token refresh...");
-        const newToken = await refreshAuthToken();
-        
-        if (newToken) {
-          updateDropzoneToken(newToken);
-          
-          // Retry the upload after token refresh
-          console.log("🔄 Retrying upload with new token...");
-          setTimeout(() => {
-            file.status = Dropzone.QUEUED;
-            dropzone.processFile(file);
-          }, 1000);
-          return;
+        const requestHostname = new URL(origin).hostname.toLowerCase();
+        if (allowedHostnames.has(requestHostname) || isLocalNetwork) {
+          callback(null, true);
         } else {
-          // Token refresh failed, show error
-          setUploadStatus({ [file.name]: "error" });
-          if (onUploadError) {
-            onUploadError(new Error(language === "ar" ? "انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى" : "Session expired. Please login again"), file);
-          }
+          callback(new Error("Not allowed by CORS"));
         }
-      } 
-      // Check if it's a connection error (502, ERR_CONNECTION_RESET)
-      else if (xhr && (xhr.status === 502 || xhr.status === 0)) {
-        console.log("🔌 Connection error detected, will retry automatically...");
-        // Dropzone will retry automatically based on retryChunks settings
-        // Don't set error status yet, let retries happen
-        return;
+      } catch {
+        callback(new Error("Not allowed by CORS"));
       }
-      else {
-        setUploadStatus({ [file.name]: "error" });
-        if (onUploadError) {
-          onUploadError(new Error(errorMessage), file);
-        }
-      }
+    },
+    credentials: true,
+    exposedHeaders: ["Retry-After"],
+  })
+);
 
-      // Clear token refresh interval on final error
-      if (tokenRefreshIntervalRef.current) {
-        clearInterval(tokenRefreshIntervalRef.current);
-        tokenRefreshIntervalRef.current = null;
-      }
+// Request guards - SKIP for upload routes
+app.use((req, res, next) => {
+  // Skip guards for video upload endpoints
+  if (req.path.includes('/upload/video-chunk')) {
+    return next();
+  }
+  rateLimitGuard(req, res, next);
+});
+
+app.use((req, res, next) => {
+  if (req.path.includes('/upload/video-chunk')) {
+    return next();
+  }
+  duplicateRequestGuard(req, res, next);
+});
+
+app.use((req, res, next) => {
+  if (req.path.includes('/upload/video-chunk')) {
+    return next();
+  }
+  requestSizeGuard(10 * 1024 * 1024)(req, res, next);
+});
+
+// Request timeout - configurable via environment variable
+const REQUEST_TIMEOUT = parseInt(process.env.REQUEST_TIMEOUT || '600000', 10); // Default: 10 minutes
+console.log("⏱️  Request timeout:", REQUEST_TIMEOUT, "ms", `(${REQUEST_TIMEOUT / 1000}s)`);
+
+app.use((req, res, next) => {
+  // Skip timeout for video upload endpoints (they handle their own timeout)
+  if (req.path.includes('/upload/video-chunk')) {
+    return next();
+  }
+  requestTimeoutGuard(REQUEST_TIMEOUT)(req, res, next);
+});
+
+// Body parser - Large limits for video uploads
+app.use(express.json({ limit: '5368709120' })); // 5GB
+app.use(express.urlencoded({ extended: true, limit: '5368709120' })); // 5GB
+
+// Apply rate limiting to all API routes (except uploads)
+app.use('/api', (req, res, next) => {
+  if (req.path.includes('/upload/video-chunk')) {
+    return next();
+  }
+  apiLimiter(req, res, next);
+});
+
+// Serve uploaded files
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const uploadsPath = path.join(__dirname, "../uploads");
+console.log("📁 Serving uploads from:", uploadsPath);
+
+app.use("/uploads", express.static(uploadsPath, {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.mp4') || filePath.endsWith('.webm')) {
+      res.setHeader('Content-Type', 'video/mp4');
+      res.setHeader('Accept-Ranges', 'bytes');
+      res.setHeader('Cache-Control', 'public, max-age=31536000');
+    }
+  },
+  fallthrough: false,
+}));
+
+// Health check
+app.get("/health", (req, res) => {
+  res.json({ status: "OK", timestamp: new Date().toISOString() });
+});
+
+// Database connection test
+app.get("/health/db", async (req, res) => {
+  try {
+    const { testDatabaseConnection } = await import("./utils/dbTest.js");
+    const result = await testDatabaseConnection();
+    if (result.connected) {
+      res.json({
+        status: "OK",
+        database: "connected",
+        userCount: result.userCount,
+        timestamp: new Date().toISOString(),
+      });
+    } else {
+      res.status(500).json({
+        status: "ERROR",
+        database: "disconnected",
+        error: result.error,
+        timestamp: new Date().toISOString(),
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      status: "ERROR",
+      database: "error",
+      error: error.message,
+      timestamp: new Date().toISOString(),
     });
+  }
+});
 
-    dropzone.on("complete", (file) => {
-      if (file.status === "error") {
-        console.error("❌ Upload failed:", file.name);
-        setUploadStatus({ [file.name]: "error" });
-      }
-      
-      // Clear token refresh interval
-      if (tokenRefreshIntervalRef.current) {
-        clearInterval(tokenRefreshIntervalRef.current);
-        tokenRefreshIntervalRef.current = null;
-      }
-    });
+// Health check routes
+import healthRoutes from "./routes/health.js";
+app.use("/health", healthRoutes);
 
-    dropzone.on("canceled", (file) => {
-      console.log("🚫 Upload canceled:", file.name);
-      
-      // Clear token refresh interval
-      if (tokenRefreshIntervalRef.current) {
-        clearInterval(tokenRefreshIntervalRef.current);
-        tokenRefreshIntervalRef.current = null;
-      }
-    });
+// API Documentation
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-    dropzoneInstanceRef.current = dropzone;
+// Public app routes
+import appRoutes from "./routes/app.js";
+app.use("/api/app", appRoutes);
 
-    // Cleanup
-    return () => {
-      if (tokenRefreshIntervalRef.current) {
-        clearInterval(tokenRefreshIntervalRef.current);
-      }
-      if (dropzoneInstanceRef.current) {
-        dropzoneInstanceRef.current.destroy();
-      }
-    };
-  }, [courseId, contentId, language, onUploadComplete, onUploadError]);
+// Routes
+app.use("/api/auth", authRoutes);
+app.use("/api/admin/upload", videoUploadRoutes); // Video upload routes
+app.use("/api/admin", adminRoutes);
 
-  const removeFile = () => {
-    if (dropzoneInstanceRef.current && dropzoneInstanceRef.current.files.length > 0) {
-      dropzoneInstanceRef.current.removeAllFiles(true);
-      setUploadProgress({});
-      setUploadStatus({});
-      
-      // Clear token refresh interval
-      if (tokenRefreshIntervalRef.current) {
-        clearInterval(tokenRefreshIntervalRef.current);
-        tokenRefreshIntervalRef.current = null;
+// Mobile routes
+app.use("/api/mobile/public", publicMobileRoutes);
+app.use("/api/mobile/student", studentMobileRoutes);
+app.use("/api/mobile/teacher", teacherMobileRoutes);
+app.use("/api/mobile/admin", adminMobileRoutes);
+app.use("/api/web", webRoutes);
+app.use("/api/notifications", notificationLimiter);
+app.use("/api", profileRoutes);
+
+// Error handling
+app.use(notFoundHandler);
+app.use(errorHandler);
+
+// Get local IP address
+function getLocalIPAddress() {
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name]) {
+      if (iface.family === "IPv4" && !iface.internal) {
+        return iface.address;
       }
     }
-  };
-
-  const getFileStatus = (fileName) => {
-    return uploadStatus[fileName] || "idle";
-  };
-
-  const getProgress = (fileName) => {
-    return uploadProgress[fileName] || 0;
-  };
-
-  return (
-    <div className="space-y-4">
-      <div
-        ref={dropzoneRef}
-        className="dropzone border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-primary transition-colors bg-gray-50 hover:bg-gray-100"
-      >
-        <div className="flex flex-col items-center gap-4">
-          <Upload className="w-12 h-12 text-gray-400" />
-          <div>
-            <p className="text-sm font-medium text-gray-700">
-              {language === "ar" ? "اسحب الفيديو هنا" : "Drop video here"}
-            </p>
-            <p className="text-xs text-gray-500 mt-1">
-              {language === "ar" ? "أو اضغط للاختيار" : "or click to select"}
-            </p>
-          </div>
-          <p className="text-xs text-gray-400">
-            {language === "ar"
-              ? "يدعم رفع الفيديوهات الكبيرة (حتى 10GB) مع إمكانية الاستئناف"
-              : "Supports large video uploads (up to 10GB) with resume capability"}
-          </p>
-        </div>
-      </div>
-
-      {/* Upload Progress */}
-      {Object.keys(uploadProgress).length > 0 && (
-        <div className="space-y-2">
-          {Object.entries(uploadProgress).map(([fileName, progress]) => {
-            const status = getFileStatus(fileName);
-            return (
-              <div key={fileName} className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium truncate flex-1 mr-2">{fileName}</span>
-                  <div className="flex items-center gap-2">
-                    {status === "uploading" && (
-                      <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                    )}
-                    {status === "success" && (
-                      <CheckCircle2 className="w-4 h-4 text-green-500" />
-                    )}
-                    {status === "error" && (
-                      <AlertCircle className="w-4 h-4 text-red-500" />
-                    )}
-                    <span className="text-muted-foreground">{progress}%</span>
-                    {status !== "uploading" && (
-                      <button
-                        onClick={removeFile}
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className={`h-2 rounded-full transition-all ${
-                      status === "success"
-                        ? "bg-green-500"
-                        : status === "error"
-                        ? "bg-red-500"
-                        : "bg-primary"
-                    }`}
-                    style={{ width: `${progress}%` }}
-                  />
-                </div>
-                {status === "uploading" && (
-                  <p className="text-xs text-gray-500">
-                    {language === "ar" 
-                      ? "جاري الرفع... يرجى عدم إغلاق الصفحة" 
-                      : "Uploading... Please don't close this page"}
-                  </p>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
+  }
+  return "localhost";
 }
+
+// Prisma setup
+import prisma from './config/database.js';
+import { getPrismaHealthStatus } from './utils/prismaHealthCheck.js';
+
+const verifyPrismaModels = async () => {
+  try {
+    const health = getPrismaHealthStatus();
+    if (!health.healthy) {
+      console.warn('⚠️  Some Prisma models are missing. Features may not work correctly.');
+      console.warn('⚠️  To fix: Run "npm run prisma:generate" on the server');
+    } else {
+      console.log('✅ All Prisma models are available');
+    }
+  } catch (error) {
+    console.error('❌ Error verifying Prisma models:', error.message);
+  }
+};
+
+verifyPrismaModels();
+
+// Create HTTP server with extended timeouts for video uploads
+const HOST = "0.0.0.0";
+const localIP = getLocalIPAddress();
+
+const server = http.createServer(app);
+
+// CRITICAL: Extended timeouts for large video uploads
+server.timeout = 1800000; // 30 minutes
+server.keepAliveTimeout = 1800000; // 30 minutes  
+server.headersTimeout = 1900000; // 31 minutes (must be > keepAliveTimeout)
+
+console.log("⏱️  Server timeout:", server.timeout / 1000, "seconds");
+console.log("⏱️  Keep-alive timeout:", server.keepAliveTimeout / 1000, "seconds");
+
+server.listen(PORT, HOST, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📱 Local access: http://localhost:${PORT}`);
+  console.log(`🌐 Network access: http://${localIP}:${PORT}`);
+  console.log(`📚 API Documentation: http://${localIP}:${PORT}/api-docs`);
+  console.log(`\n💡 Share this IP with others on your WiFi: ${localIP}:${PORT}`);
+  
+  // Start scheduled jobs
+  if (process.env.NODE_ENV !== 'test') {
+    import('./jobs/courseExpirationJob.js').then(({ startCourseExpirationJob }) => {
+      startCourseExpirationJob();
+    }).catch(err => {
+      console.error('Error starting scheduled jobs:', err);
+    });
+  }
+});
+
+export default app;

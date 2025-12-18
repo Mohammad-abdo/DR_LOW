@@ -2,8 +2,8 @@ import axios from "axios";
 import { deduplicateRequest, retryRequest, withTimeout } from "./requestGuard.js";
 
 // Production API URL - always use this in production
-const PRODUCTION_API_URL = "http://localhost:5005/api"; 
-// const PRODUCTION_API_URL = "https://dr-law.developteam.site/api";
+// const PRODUCTION_API_URL = "http://localhost:5005/api"; 
+const PRODUCTION_API_URL = "https://dr-law.developteam.site/api";
 
 // Use environment variable only if it's not localhost, otherwise force production URL
 const getApiUrl = () => {

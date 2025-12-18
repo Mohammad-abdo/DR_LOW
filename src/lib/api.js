@@ -39,7 +39,7 @@ const api = axios.create({
     "Content-Type": "application/json",
     Accept: "application/json",
   },
-  timeout: 300000, // 5 minutes timeout for large file uploads (videos can be up to 5GB)
+  timeout: 30000, // 5 minutes timeout for large file uploads (videos can be up to 5GB)
 });
 
 api.interceptors.request.use(

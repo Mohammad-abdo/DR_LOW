@@ -9,23 +9,65 @@ export default function DropzoneVideoUpload({ onUploadComplete, onUploadError, c
   const { language } = useLanguage();
   const dropzoneRef = useRef(null);
   const dropzoneInstanceRef = useRef(null);
+  const tokenRefreshIntervalRef = useRef(null);
   const [uploadProgress, setUploadProgress] = useState({});
   const [uploadStatus, setUploadStatus] = useState({}); // 'uploading', 'success', 'error'
+
+  // Function to refresh auth token
+  const refreshAuthToken = async () => {
+    try {
+      const currentToken = localStorage.getItem("auth_token") || localStorage.getItem("token");
+      if (!currentToken) return null;
+
+      const response = await api.post('/auth/refresh-token', {}, {
+        headers: { Authorization: `Bearer ${currentToken}` }
+      });
+
+      if (response.data.success && response.data.token) {
+        localStorage.setItem("auth_token", response.data.token);
+        localStorage.setItem("token", response.data.token);
+        console.log("✅ Token refreshed successfully");
+        return response.data.token;
+      }
+      return null;
+    } catch (error) {
+      console.error("❌ Token refresh failed:", error);
+      return null;
+    }
+  };
+
+  // Update dropzone headers with new token
+  const updateDropzoneToken = (newToken) => {
+    if (dropzoneInstanceRef.current && newToken) {
+      dropzoneInstanceRef.current.options.headers = {
+        ...dropzoneInstanceRef.current.options.headers,
+        Authorization: `Bearer ${newToken}`
+      };
+      console.log("🔄 Dropzone token updated");
+    }
+  };
 
   useEffect(() => {
     if (!dropzoneRef.current) return;
 
+    const baseUrl = api?.defaults?.baseURL || (import.meta.env.VITE_API_URL || 'https://dr-law.developteam.site/api');
+    const authToken = localStorage.getItem("auth_token") || localStorage.getItem("token");
+
     // Initialize Dropzone
     const dropzone = new Dropzone(dropzoneRef.current, {
-      url: `${import.meta.env.VITE_API_URL || 'https://dr-law.developteam.site/api'}/admin/upload/video-chunk`,
+      url: `${baseUrl}/admin/upload/video-chunk`,
       method: "post",
       paramName: "chunk",
       chunking: true,
-      chunkSize: 8 * 1024 * 1024, // 8MB chunks
+      // Bigger chunks => fewer HTTP requests => faster uploads for small/medium videos
+      // Keep under backend safety limit (50MB per chunk)
+      chunkSize: 50 * 1024 * 1024, // 50MB chunks
       retryChunks: true,
-      retryChunksLimit: 3,
-      parallelChunkUploads: true,
-      maxFilesize: 10 * 1024 * 1024 * 1024, // 10GB max
+      retryChunksLimit: 5, // Increased from 3 to 5
+      // Parallel chunk uploads can overload some hosts/proxies and trigger throttling.
+      // Sequential uploads are typically more stable (especially behind reverse proxies).
+      parallelChunkUploads: false,
+      maxFilesize: 10 * 1024 * 1024 * 1024, // 10GB max (in KB: 10,485,760)
       acceptedFiles: "video/*",
       addRemoveLinks: false,
       autoProcessQueue: true,
@@ -46,9 +88,7 @@ export default function DropzoneVideoUpload({ onUploadComplete, onUploadError, c
       dictResponseError: language === "ar"
         ? "حدث خطأ أثناء الرفع"
         : "An error occurred while uploading",
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
-      },
+      headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
       params: {
         courseId: courseId || "",
         contentId: contentId || "",
@@ -57,6 +97,7 @@ export default function DropzoneVideoUpload({ onUploadComplete, onUploadError, c
 
     // Event handlers
     dropzone.on("addedfile", (file) => {
+      console.log("📹 File added:", file.name, "Size:", (file.size / 1024 / 1024).toFixed(2), "MB");
       setUploadStatus({ [file.name]: "uploading" });
       setUploadProgress({ [file.name]: 0 });
       
@@ -64,6 +105,18 @@ export default function DropzoneVideoUpload({ onUploadComplete, onUploadError, c
       if (dropzone.files.length > 1) {
         dropzone.removeFile(dropzone.files[0]);
       }
+
+      // Start token refresh interval (refresh every 45 minutes)
+      if (tokenRefreshIntervalRef.current) {
+        clearInterval(tokenRefreshIntervalRef.current);
+      }
+      tokenRefreshIntervalRef.current = setInterval(async () => {
+        console.log("🔄 Auto-refreshing token during upload...");
+        const newToken = await refreshAuthToken();
+        if (newToken) {
+          updateDropzoneToken(newToken);
+        }
+      }, 45 * 60 * 1000); // 45 minutes
     });
 
     dropzone.on("uploadprogress", (file, progress, bytesSent) => {
@@ -74,10 +127,18 @@ export default function DropzoneVideoUpload({ onUploadComplete, onUploadError, c
     });
 
     dropzone.on("chunkuploaded", (file, chunk, response) => {
-      console.log(`Chunk ${chunk.index} uploaded for ${file.name}`);
+      console.log(`✅ Chunk ${chunk.index + 1} uploaded for ${file.name}`);
     });
 
     dropzone.on("success", (file, response) => {
+      console.log("🎉 Upload completed successfully:", file.name);
+      
+      // Clear token refresh interval
+      if (tokenRefreshIntervalRef.current) {
+        clearInterval(tokenRefreshIntervalRef.current);
+        tokenRefreshIntervalRef.current = null;
+      }
+
       try {
         const data = typeof response === "string" ? JSON.parse(response) : response;
         setUploadStatus({ [file.name]: "success" });
@@ -85,7 +146,7 @@ export default function DropzoneVideoUpload({ onUploadComplete, onUploadError, c
           onUploadComplete(data, file);
         }
       } catch (error) {
-        console.error("Error parsing upload response:", error);
+        console.error("❌ Error parsing upload response:", error);
         setUploadStatus({ [file.name]: "error" });
         if (onUploadError) {
           onUploadError(error, file);
@@ -93,23 +154,83 @@ export default function DropzoneVideoUpload({ onUploadComplete, onUploadError, c
       }
     });
 
-    dropzone.on("error", (file, errorMessage, xhr) => {
-      console.error("Upload error:", errorMessage, xhr);
-      setUploadStatus({ [file.name]: "error" });
-      if (onUploadError) {
-        onUploadError(new Error(errorMessage), file);
+    dropzone.on("error", async (file, errorMessage, xhr) => {
+      console.error("❌ Upload error:", errorMessage, xhr);
+      
+      // Check if it's an authentication error (401)
+      if (xhr && xhr.status === 401) {
+        console.log("🔐 Authentication error detected, attempting token refresh...");
+        const newToken = await refreshAuthToken();
+        
+        if (newToken) {
+          updateDropzoneToken(newToken);
+          
+          // Retry the upload after token refresh
+          console.log("🔄 Retrying upload with new token...");
+          setTimeout(() => {
+            file.status = Dropzone.QUEUED;
+            dropzone.processFile(file);
+          }, 1000);
+          return;
+        } else {
+          // Token refresh failed, show error
+          setUploadStatus({ [file.name]: "error" });
+          if (onUploadError) {
+            onUploadError(new Error(language === "ar" ? "انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى" : "Session expired. Please login again"), file);
+          }
+        }
+      } 
+      // Check if it's a connection error (502, ERR_CONNECTION_RESET)
+      else if (xhr && (xhr.status === 502 || xhr.status === 0)) {
+        console.log("🔌 Connection error detected, will retry automatically...");
+        // Dropzone will retry automatically based on retryChunks settings
+        // Don't set error status yet, let retries happen
+        return;
+      }
+      else {
+        setUploadStatus({ [file.name]: "error" });
+        if (onUploadError) {
+          onUploadError(new Error(errorMessage), file);
+        }
+      }
+
+      // Clear token refresh interval on final error
+      if (tokenRefreshIntervalRef.current) {
+        clearInterval(tokenRefreshIntervalRef.current);
+        tokenRefreshIntervalRef.current = null;
       }
     });
 
     dropzone.on("complete", (file) => {
       if (file.status === "error") {
+        console.error("❌ Upload failed:", file.name);
         setUploadStatus({ [file.name]: "error" });
+      }
+      
+      // Clear token refresh interval
+      if (tokenRefreshIntervalRef.current) {
+        clearInterval(tokenRefreshIntervalRef.current);
+        tokenRefreshIntervalRef.current = null;
+      }
+    });
+
+    dropzone.on("canceled", (file) => {
+      console.log("🚫 Upload canceled:", file.name);
+      
+      // Clear token refresh interval
+      if (tokenRefreshIntervalRef.current) {
+        clearInterval(tokenRefreshIntervalRef.current);
+        tokenRefreshIntervalRef.current = null;
       }
     });
 
     dropzoneInstanceRef.current = dropzone;
 
+    // Cleanup
     return () => {
+      if (tokenRefreshIntervalRef.current) {
+        clearInterval(tokenRefreshIntervalRef.current);
+      }
       if (dropzoneInstanceRef.current) {
         dropzoneInstanceRef.current.destroy();
       }
@@ -121,6 +242,12 @@ export default function DropzoneVideoUpload({ onUploadComplete, onUploadError, c
       dropzoneInstanceRef.current.removeAllFiles(true);
       setUploadProgress({});
       setUploadStatus({});
+      
+      // Clear token refresh interval
+      if (tokenRefreshIntervalRef.current) {
+        clearInterval(tokenRefreshIntervalRef.current);
+        tokenRefreshIntervalRef.current = null;
+      }
     }
   };
 
@@ -198,6 +325,13 @@ export default function DropzoneVideoUpload({ onUploadComplete, onUploadError, c
                     style={{ width: `${progress}%` }}
                   />
                 </div>
+                {status === "uploading" && (
+                  <p className="text-xs text-gray-500">
+                    {language === "ar" 
+                      ? "جاري الرفع... يرجى عدم إغلاق الصفحة" 
+                      : "Uploading... Please don't close this page"}
+                  </p>
+                )}
               </div>
             );
           })}
@@ -206,8 +340,3 @@ export default function DropzoneVideoUpload({ onUploadComplete, onUploadError, c
     </div>
   );
 }
-
-
-
-
-

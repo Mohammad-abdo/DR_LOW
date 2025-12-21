@@ -248,7 +248,7 @@ export default function AdminCategories() {
                       onClick={() => handleDeleteClick(category)}
                       className="cursor-pointer hover:bg-destructive/10 hover:text-destructive  text-red-900"
                     >
-                      <Trash2 className="w-4 h-4 mr-1" />
+                      <Trash2 className="w-4 h-4 mr-1" style={{ color: 'red' }}/>
                       {language === "ar" ? "حذف" : "Delete"}
                     </Button>
                   </div>

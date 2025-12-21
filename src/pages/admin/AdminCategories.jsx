@@ -7,7 +7,8 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Edit, Trash2, Eye, Folder, Loader2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Search, Plus, Edit, Trash2, Eye, Folder, Loader2, AlertTriangle } from "lucide-react";
 import { getImageUrl } from "@/lib/imageHelper";
 
 export default function AdminCategories() {
@@ -21,6 +22,13 @@ export default function AdminCategories() {
     limit: 10,
     total: 0,
     pages: 0,
+  });
+  const [deleteDialog, setDeleteDialog] = useState({
+    open: false,
+    category: null,
+    reassignTo: "",
+    forceDelete: false,
+    deleting: false,
   });
 
   useEffect(() => {
@@ -69,22 +77,76 @@ export default function AdminCategories() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm(language === "ar" ? "هل أنت متأكد من الحذف؟" : "Are you sure you want to delete?")) {
-      return;
-    }
+  const handleDeleteClick = (category) => {
+    setDeleteDialog({
+      open: true,
+      category,
+      reassignTo: "",
+      forceDelete: false,
+      deleting: false,
+    });
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteDialog.category) return;
+
+    const { category, reassignTo, forceDelete } = deleteDialog;
+    setDeleteDialog((prev) => ({ ...prev, deleting: true }));
+
     try {
-      const response = await api.delete(`/admin/categories/${id}`);
-      console.log("Delete response:", response.data);
+      let url = `/admin/categories/${category.id}`;
+      const params = new URLSearchParams();
+      
+      if (reassignTo) {
+        params.append("reassignTo", reassignTo);
+      } else if (forceDelete) {
+        params.append("force", "true");
+      }
+      
+      if (params.toString()) {
+        url += `?${params.toString()}`;
+      }
+
+      const response = await api.delete(url);
+      
       if (response.data?.success) {
-        alert(language === "ar" ? "تم حذف الفئة بنجاح" : "Category deleted successfully");
+        const message = response.data.message || response.data.messageAr || 
+          (language === "ar" ? "تم حذف الفئة بنجاح" : "Category deleted successfully");
+        alert(message);
+        setDeleteDialog({ open: false, category: null, reassignTo: "", forceDelete: false, deleting: false });
         fetchCategories();
       } else {
-        alert(response.data?.message || "Error deleting category");
+        // If category has courses, show options
+        if (response.data?.data?.courseCount > 0) {
+          setDeleteDialog((prev) => ({
+            ...prev,
+            deleting: false,
+            category: { ...category, courseCount: response.data.data.courseCount, courses: response.data.data.courses },
+          }));
+        } else {
+          alert(response.data?.message || response.data?.messageAr || "Error deleting category");
+          setDeleteDialog((prev) => ({ ...prev, deleting: false }));
+        }
       }
     } catch (error) {
       console.error("Error deleting category:", error);
-      alert(error.response?.data?.message || "Error deleting category");
+      const errorData = error.response?.data;
+      
+      // If category has courses, show options in dialog
+      if (errorData?.data?.courseCount > 0) {
+        setDeleteDialog((prev) => ({
+          ...prev,
+          deleting: false,
+          category: { 
+            ...category, 
+            courseCount: errorData.data.courseCount, 
+            courses: errorData.data.courses || [] 
+          },
+        }));
+      } else {
+        alert(errorData?.message || errorData?.messageAr || "Error deleting category");
+        setDeleteDialog((prev) => ({ ...prev, deleting: false }));
+      }
     }
   };
 
@@ -180,7 +242,7 @@ export default function AdminCategories() {
                     <Button
                       variant="destructive"
                       size="sm"
-                      onClick={() => handleDelete(category.id)}
+                      onClick={() => handleDeleteClick(category)}
                     >
                       <Trash2 className="w-4 h-4 mr-1" />
                       {language === "ar" ? "حذف" : "Delete"}
@@ -214,6 +276,114 @@ export default function AdminCategories() {
           )}
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialog.open} onOpenChange={(open) => !deleteDialog.deleting && setDeleteDialog({ ...deleteDialog, open })}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
+                <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
+              </div>
+              <DialogTitle>
+                {language === "ar" ? "تأكيد الحذف" : "Confirm Deletion"}
+              </DialogTitle>
+            </div>
+            <DialogDescription className="pt-2">
+              {deleteDialog.category?.courseCount > 0 ? (
+                <div className="space-y-3">
+                  <p className="text-red-600 dark:text-red-400 font-medium">
+                    {language === "ar" 
+                      ? `تحذير: هذه الفئة تحتوي على ${deleteDialog.category.courseCount} دورة`
+                      : `Warning: This category contains ${deleteDialog.category.courseCount} course(s)`}
+                  </p>
+                  <p className="text-sm">
+                    {language === "ar"
+                      ? "اختر أحد الخيارات التالية:"
+                      : "Please choose one of the following options:"}
+                  </p>
+                </div>
+              ) : (
+                <p>
+                  {language === "ar"
+                    ? "هل أنت متأكد من حذف هذه الفئة؟ لا يمكن التراجع عن هذا الإجراء."
+                    : "Are you sure you want to delete this category? This action cannot be undone."}
+                </p>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          {deleteDialog.category?.courseCount > 0 && (
+            <div className="space-y-4 py-4">
+              {/* Reassign Option */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  {language === "ar" ? "إعادة تعيين الدورات إلى فئة أخرى:" : "Reassign courses to another category:"}
+                </label>
+                <select
+                  className="w-full px-3 py-2 border rounded-md bg-background"
+                  value={deleteDialog.reassignTo}
+                  onChange={(e) => setDeleteDialog({ ...deleteDialog, reassignTo: e.target.value, forceDelete: false })}
+                >
+                  <option value="">
+                    {language === "ar" ? "-- اختر فئة --" : "-- Select Category --"}
+                  </option>
+                  {categories
+                    .filter((cat) => cat.id !== deleteDialog.category?.id)
+                    .map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {language === "ar" ? cat.nameAr : cat.nameEn}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              {/* Force Delete Option */}
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="forceDelete"
+                  checked={deleteDialog.forceDelete}
+                  onChange={(e) => setDeleteDialog({ ...deleteDialog, forceDelete: e.target.checked, reassignTo: "" })}
+                  className="w-4 h-4"
+                />
+                <label htmlFor="forceDelete" className="text-sm text-red-600 dark:text-red-400 cursor-pointer">
+                  {language === "ar"
+                    ? "حذف الفئة وجميع الدورات (تحذير: سيتم حذف جميع الدورات بشكل دائم)"
+                    : "Delete category and all courses (WARNING: All courses will be permanently deleted)"}
+                </label>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialog({ open: false, category: null, reassignTo: "", forceDelete: false, deleting: false })}
+              disabled={deleteDialog.deleting}
+            >
+              {language === "ar" ? "إلغاء" : "Cancel"}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteConfirm}
+              disabled={deleteDialog.deleting || (deleteDialog.category?.courseCount > 0 && !deleteDialog.reassignTo && !deleteDialog.forceDelete)}
+            >
+              {deleteDialog.deleting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  {language === "ar" ? "جاري الحذف..." : "Deleting..."}
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  {language === "ar" ? "حذف" : "Delete"}
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -58,7 +58,6 @@ import AdminTicketDetail from "./pages/admin/AdminTicketDetail";
 import AdminFinancial from "./pages/admin/AdminFinancial";
 import AdminReports from "./pages/admin/AdminReports";
 import AdminNotifications from "./pages/admin/AdminNotifications";
-import AdminSettings from "./pages/admin/AdminSettings";
 import AdminProfile from "./pages/admin/AdminProfile";
 import AdminAboutApp from "./pages/admin/AdminAboutApp";
 import AdminHelpSupport from "./pages/admin/AdminHelpSupport";
@@ -495,18 +494,6 @@ function AppRoutes() {
           <ProtectedRoute requireAdmin>
             <AdminLayout>
               <AdminNotifications />
-            </AdminLayout>
-          </ProtectedRoute>
-        }
-      />
-
-      {/* Settings */}
-      <Route
-        path="/admin/settings"
-        element={
-          <ProtectedRoute requireAdmin>
-            <AdminLayout>
-              <AdminSettings />
             </AdminLayout>
           </ProtectedRoute>
         }

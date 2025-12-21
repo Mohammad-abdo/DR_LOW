@@ -108,7 +108,19 @@ export const AuthProvider = ({ children }) => {
       setToken(newToken);
       setUser(userWithRole);
     } catch (error) {
-      throw new Error(error.response?.data?.message || error.response?.data?.error || "Login failed");
+      // Extract detailed error message from backend
+      const errorData = error.response?.data;
+      const errorMessage = errorData?.message || errorData?.messageAr || errorData?.error || "Login failed";
+      const errorCode = errorData?.errorCode;
+      const errorField = errorData?.field;
+      
+      // Create a more detailed error message
+      const detailedError = new Error(errorMessage);
+      detailedError.errorCode = errorCode;
+      detailedError.field = errorField;
+      detailedError.messageAr = errorData?.messageAr;
+      
+      throw detailedError;
     }
   };
 

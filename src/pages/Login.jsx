@@ -80,7 +80,20 @@ export default function Login() {
         navigate("/admin/dashboard");
       }
     } catch (err) {
-      setError(err.message || "Login failed. Please try again.");
+      // Display detailed error message based on language
+      const errorMessage = language === "ar" 
+        ? (err.messageAr || err.message || "فشل تسجيل الدخول. يرجى المحاولة مرة أخرى.")
+        : (err.message || "Login failed. Please try again.");
+      
+      setError(errorMessage);
+      
+      // Log error details for debugging
+      console.error("Login error:", {
+        message: err.message,
+        messageAr: err.messageAr,
+        errorCode: err.errorCode,
+        field: err.field,
+      });
     } finally {
       setLoading(false);
     }

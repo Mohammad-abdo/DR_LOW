@@ -581,11 +581,6 @@ function SidebarContent({
       path: "/admin/notifications",
     },
     {
-      icon: Settings,
-      label: language === "ar" ? "الإعدادات" : "Settings",
-      path: "/admin/settings",
-    },
-    {
       icon: Info,
       label: language === "ar" ? "معلومات التطبيق" : "About App",
       path: "/admin/about-app",
@@ -645,7 +640,6 @@ function SidebarContent({
           const isActive =
             location.pathname === item.path ||
             (item.path !== "/admin/dashboard" &&
-              item.path !== "/admin/settings" &&
               location.pathname.startsWith(item.path + "/"));
 
           return (

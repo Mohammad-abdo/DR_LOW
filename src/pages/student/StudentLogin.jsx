@@ -76,7 +76,23 @@ export default function StudentLogin() {
         language === "ar" ? "تم تسجيل الدخول بنجاح" : "Logged in successfully"
       );
     } catch (err) {
-      setError(
+      // Display detailed error message based on language
+      const errorMessage = language === "ar" 
+        ? (err.messageAr || err.message || "فشل تسجيل الدخول. يرجى المحاولة مرة أخرى.")
+        : (err.message || "Login failed. Please try again.");
+      
+      setError(errorMessage);
+      
+      // Show toast with error
+      showToast.error(errorMessage);
+      
+      // Log error details for debugging
+      console.error("Student login error:", {
+        message: err.message,
+        messageAr: err.messageAr,
+        errorCode: err.errorCode,
+        field: err.field,
+      });
         err.response?.data?.message ||
           (language === "ar" ? "فشل تسجيل الدخول" : "Login failed")
       );

@@ -80,7 +80,10 @@ export default function AdminCategories() {
   const handleDeleteClick = (category) => {
     setDeleteDialog({
       open: true,
-      category,
+      category: {
+        ...category,
+        courseCount: category._count?.courses || 0,
+      },
       reassignTo: "",
       forceDelete: false,
       deleting: false,

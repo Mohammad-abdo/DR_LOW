@@ -93,13 +93,6 @@ export default function StudentLogin() {
         errorCode: err.errorCode,
         field: err.field,
       });
-        err.response?.data?.message ||
-          (language === "ar" ? "فشل تسجيل الدخول" : "Login failed")
-      );
-      showToast.error(
-        err.response?.data?.message ||
-          (language === "ar" ? "فشل تسجيل الدخول" : "Login failed")
-      );
     } finally {
       setLoading(false);
     }

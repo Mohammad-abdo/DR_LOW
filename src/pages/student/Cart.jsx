@@ -16,6 +16,8 @@ import {
   CreditCard,
   ArrowRight,
   X,
+  Send,
+  CheckCircle2,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -76,6 +78,48 @@ export default function Cart() {
       showToast.error(
         language === "ar" ? "خطأ في تفريغ السلة" : "Error clearing cart"
       );
+    }
+  };
+
+  const handleSubmitRequest = async () => {
+    if (cart.items.length === 0) {
+      showToast.error(
+        language === "ar" ? "السلة فارغة" : "Cart is empty"
+      );
+      return;
+    }
+
+    try {
+      setProcessing(true);
+      const response = await api.post("/mobile/student/cart/submit");
+      
+      if (response.data?.success) {
+        const requestsCount = response.data.data?.requests?.length || cart.items.length;
+        showToast.success(
+          language === "ar" 
+            ? `تم تقديم ${requestsCount} طلب دورة بنجاح. سيتم مراجعته من قبل المدير.`
+            : `${requestsCount} course request(s) submitted successfully. It will be reviewed by the administrator.`
+        );
+        
+        // Clear cart and refresh
+        setCart({ items: [] });
+        await fetchCart();
+        
+        // Navigate to dashboard or requests page
+        navigate("/dashboard");
+      } else {
+        showToast.error(
+          response.data?.message || response.data?.messageAr || 
+          (language === "ar" ? "خطأ في تقديم الطلب" : "Error submitting request")
+        );
+      }
+    } catch (error) {
+      console.error("Error submitting cart:", error);
+      const errorMessage = error.response?.data?.message || error.response?.data?.messageAr || 
+        (language === "ar" ? "خطأ في تقديم الطلب" : "Error submitting request");
+      showToast.error(errorMessage);
+    } finally {
+      setProcessing(false);
     }
   };
 
@@ -287,23 +331,44 @@ export default function Cart() {
                     </div>
                   </div>
 
+                  {/* Submit Course Request Button - Primary Action */}
                   <Button
-                    onClick={handleCheckout}
+                    onClick={handleSubmitRequest}
                     disabled={processing || cart.items.length === 0}
-                    className="w-full bg-amber-600 hover:bg-amber-700 text-white h-12 sm:h-14 text-base sm:text-lg font-semibold shadow-lg hover:shadow-xl transition-all"
+                    className="w-full bg-primary hover:bg-primary/90 text-white h-12 sm:h-14 text-base sm:text-lg font-semibold shadow-lg hover:shadow-xl transition-all mb-3"
                     size="lg"
                   >
                     {processing ? (
                       <>
                         <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                        {language === "ar" ? "جاري المعالجة..." : "Processing..."}
+                        {language === "ar" ? "جاري تقديم الطلب..." : "Submitting Request..."}
                       </>
                     ) : (
                       <>
-                        <CreditCard className="w-5 h-5 mr-2" />
-                        {language === "ar" ? "إتمام الشراء" : "Proceed to Checkout"}
+                        <Send className="w-5 h-5 mr-2" />
+                        {language === "ar" ? "تقديم طلب التسجيل" : "Submit Course Request"}
                       </>
                     )}
+                  </Button>
+
+                  {/* Info Message */}
+                  <div className="mb-3 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <p className="text-xs sm:text-sm text-blue-700 dark:text-blue-300 text-center">
+                      {language === "ar" 
+                        ? "سيتم مراجعة طلبك من قبل المدير. سيتم إشعارك عند الموافقة."
+                        : "Your request will be reviewed by the administrator. You will be notified upon approval."}
+                    </p>
+                  </div>
+
+                  {/* Alternative: Payment Checkout (Optional) */}
+                  <Button
+                    onClick={handleCheckout}
+                    disabled={processing || cart.items.length === 0}
+                    variant="outline"
+                    className="w-full h-10 sm:h-12 border-amber-300 text-amber-700 hover:bg-amber-50"
+                  >
+                    <CreditCard className="w-4 h-4 mr-2" />
+                    {language === "ar" ? "إتمام الشراء (دفع)" : "Proceed to Payment"}
                   </Button>
 
                   <Button

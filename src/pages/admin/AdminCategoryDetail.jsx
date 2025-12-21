@@ -72,7 +72,7 @@ export default function AdminCategoryDetail() {
             {language === "ar" ? "تعديل" : "Edit"}
           </Button>
           <Button variant="destructive" onClick={handleDelete}>
-            <Trash2 className="w-4 h-4 mr-2" />
+            <Trash2 className="w-4 h-4 mr-2 text-shadow-orange-700" />
             {language === "ar" ? "حذف" : "Delete"}
           </Button>
         </div>

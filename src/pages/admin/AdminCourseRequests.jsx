@@ -23,6 +23,7 @@ import {
   RefreshCw
 } from "lucide-react";
 import { format } from "date-fns";
+import showToast from "@/lib/toast";
 
 export default function AdminCourseRequests() {
   const { language } = useLanguage();
@@ -51,12 +52,50 @@ export default function AdminCourseRequests() {
           status: statusFilter || undefined,
         },
       });
-      const data = extractDataFromResponse(response);
       
-      setRequests(data.requests || []);
-      setCounts(data.counts || { pending: 0, approved: 0, rejected: 0 });
+      console.log("Course Requests API Response:", response.data);
+      
+      // Handle different response structures
+      let requestsList = [];
+      let countsData = { pending: 0, approved: 0, rejected: 0 };
+      
+      const responseData = response.data;
+      
+      if (responseData?.success && responseData?.data) {
+        // Standard response: { success: true, data: { requests: [], counts: {} } }
+        requestsList = responseData.data.requests || [];
+        countsData = responseData.data.counts || { pending: 0, approved: 0, rejected: 0 };
+      } else if (responseData?.requests) {
+        // Direct requests array
+        requestsList = Array.isArray(responseData.requests) ? responseData.requests : [];
+        countsData = responseData.counts || { pending: 0, approved: 0, rejected: 0 };
+      } else if (Array.isArray(responseData)) {
+        // Response is directly an array
+        requestsList = responseData;
+        // Calculate counts from the array
+        countsData = {
+          pending: responseData.filter(r => r.status === 'pending').length,
+          approved: responseData.filter(r => r.status === 'approved').length,
+          rejected: responseData.filter(r => r.status === 'rejected').length,
+        };
+      } else {
+        // Try extractDataFromResponse as fallback
+        const data = extractDataFromResponse(response);
+        requestsList = data.requests || data.data?.requests || [];
+        countsData = data.counts || data.data?.counts || { pending: 0, approved: 0, rejected: 0 };
+      }
+      
+      console.log("Extracted Requests:", requestsList);
+      console.log("Extracted Counts:", countsData);
+      
+      setRequests(requestsList);
+      setCounts(countsData);
     } catch (error) {
       console.error("Error fetching course requests:", error);
+      showToast.error(
+        error.response?.data?.message || error.response?.data?.messageAr ||
+        (language === "ar" ? "خطأ في تحميل طلبات الدورات" : "Error loading course requests")
+      );
     } finally {
       setLoading(false);
     }

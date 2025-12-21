@@ -243,6 +243,7 @@ export default function AdminCategories() {
                       variant="destructive"
                       size="sm"
                       onClick={() => handleDeleteClick(category)}
+                      className="cursor-pointer hover:bg-destructive/10 hover:text-destructive"
                     >
                       <Trash2 className="w-4 h-4 mr-1" />
                       {language === "ar" ? "حذف" : "Delete"}

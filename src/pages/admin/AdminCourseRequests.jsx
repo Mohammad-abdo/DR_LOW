@@ -36,7 +36,7 @@ export default function AdminCourseRequests() {
   });
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("pending");
+  const [statusFilter, setStatusFilter] = useState(""); // Default: show all requests
   const [selectedRequests, setSelectedRequests] = useState([]);
   const [processing, setProcessing] = useState(false);
 
@@ -105,7 +105,15 @@ export default function AdminCourseRequests() {
     try {
       setProcessing(true);
       await api.post(`/admin/course-requests/${requestId}/approve`);
-      await fetchCourseRequests();
+      
+      // Refresh the list - if filter is "pending", switch to "approved" to show the approved request
+      if (statusFilter === "pending") {
+        setStatusFilter("approved");
+      } else {
+        // If showing all or approved, just refresh
+        await fetchCourseRequests();
+      }
+      
       alert(language === "ar" ? "تم اعتماد الطلب بنجاح" : "Request approved successfully");
     } catch (error) {
       alert(error.response?.data?.message || (language === "ar" ? "خطأ في اعتماد الطلب" : "Error approving request"));
@@ -126,7 +134,15 @@ export default function AdminCourseRequests() {
       await api.post(`/admin/course-requests/${requestId}/reject`, {
         rejectionReason: rejectionReason || null,
       });
-      await fetchCourseRequests();
+      
+      // Refresh the list - if filter is "pending", switch to "rejected" to show the rejected request
+      if (statusFilter === "pending") {
+        setStatusFilter("rejected");
+      } else {
+        // If showing all or rejected, just refresh
+        await fetchCourseRequests();
+      }
+      
       alert(language === "ar" ? "تم رفض الطلب بنجاح" : "Request rejected successfully");
     } catch (error) {
       alert(error.response?.data?.message || (language === "ar" ? "خطأ في رفض الطلب" : "Error rejecting request"));
@@ -154,7 +170,15 @@ export default function AdminCourseRequests() {
       const response = await api.post("/admin/course-requests/bulk-approve", {
         requestIds: selectedRequests,
       });
-      await fetchCourseRequests();
+      
+      // Switch to approved filter to show the approved requests
+      if (statusFilter === "pending") {
+        setStatusFilter("approved");
+      } else {
+        // If showing all or approved, just refresh
+        await fetchCourseRequests();
+      }
+      
       setSelectedRequests([]);
       alert(
         language === "ar"
@@ -336,6 +360,7 @@ export default function AdminCourseRequests() {
               <Button
                 variant={statusFilter === "" ? "default" : "outline"}
                 onClick={() => setStatusFilter("")}
+                title={language === "ar" ? "عرض جميع الطلبات" : "Show all requests"}
               >
                 <Filter className="h-4 w-4 mr-2" />
                 {language === "ar" ? "الكل" : "All"}
@@ -439,6 +464,7 @@ export default function AdminCourseRequests() {
                             <div className="flex gap-2">
                               <Button
                                 size="sm"
+                                variant="default"
                                 onClick={() => handleApprove(request.id)}
                                 disabled={processing}
                               >

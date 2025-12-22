@@ -22,8 +22,8 @@ You must add Environment Variables in Vercel Dashboard:
    Add the following variables:
 
 ```
-VITE_API_URL = https://dr-law.developteam.site/api
-VITE_API_BASE_URL = https://dr-law.developteam.site
+VITE_API_URL = https://back.dr-law.site/api
+VITE_API_BASE_URL = https://back.dr-law.site
 ```
 
 5. تأكد من اختيار:
@@ -41,7 +41,7 @@ VITE_API_BASE_URL = https://dr-law.developteam.site
 After deployment, open browser Console and check:
 
 ```
-🔗 API URL: https://dr-law.developteam.site/api (Mode: production)
+🔗 API URL: https://back.dr-law.site/api (Mode: production)
 ```
 
 إذا رأيت `localhost:5005`، هذا يعني أن:
@@ -62,6 +62,11 @@ If you see `localhost:5005`, it means:
 - The code is now configured to use production URL automatically
 - لكن Environment Variables في Vercel مهمة للتأكد
 - But Vercel Environment Variables are important to ensure
+
+
+
+
+
 
 
 

@@ -12,7 +12,7 @@ export const getImageUrl = (imagePath) => {
   }
   
   // Prepend backend URL - use environment variable or fallback to production URL
-  const backendUrl = import.meta.env.VITE_API_BASE_URL || 'https://dr-law.developteam.site';
+  const backendUrl = import.meta.env.VITE_API_BASE_URL || 'https://back.dr-law.site';
   return `${backendUrl}${imagePath}`;
 };
 
@@ -30,7 +30,7 @@ export const getVideoUrl = (videoPath) => {
   }
   
   // Prepend backend URL - use environment variable or fallback to production URL
-  const backendUrl = import.meta.env.VITE_API_BASE_URL || 'https://dr-law.developteam.site';
+  const backendUrl = import.meta.env.VITE_API_BASE_URL || 'https://back.dr-law.site';
   return `${backendUrl}${videoPath}`;
 };
 

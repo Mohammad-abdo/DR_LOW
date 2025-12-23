@@ -177,21 +177,21 @@ export default function DropzoneVideoUpload({ onUploadComplete, onUploadError, c
               </Button>
             </>
           ) : (
-            <>
-              <Upload className="w-12 h-12 text-muted-foreground" />
-              <div className="space-y-2">
-                <p className="text-sm font-medium">
-                  {language === "ar"
-                    ? "اسحب وأفلت ملف الفيديو هنا أو انقر للاختيار"
-                    : "Drag and drop video file here or click to select"}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {language === "ar"
-                    ? "MP4, WebM, MOV, AVI (حتى 5GB)"
-                    : "MP4, WebM, MOV, AVI (up to 5GB)"}
-                </p>
-              </div>
-            </>
+            // <>
+            //   <Upload className="w-12 h-12 text-muted-foreground" />
+            //   <div className="space-y-2">
+            //     <p className="text-sm font-medium">
+            //       {language === "ar"
+            //         ? "اسحب وأفلت ملف الفيديو هنا أو انقر للاختيار"
+            //         : "Drag and drop video file here or click to select"}
+            //     </p>
+            //     <p className="text-xs text-muted-foreground">
+            //       {language === "ar"
+            //         ? "MP4, WebM, MOV, AVI (حتى 5GB)"
+            //         : "MP4, WebM, MOV, AVI (up to 5GB)"}
+            //     </p>
+            //   </div>
+            // </>
           )}
         </div>
       </div>

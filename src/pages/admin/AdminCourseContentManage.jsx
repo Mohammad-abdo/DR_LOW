@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Plus, Edit, Trash2, Save, Loader2, Video, FileText, X, ClipboardList } from "lucide-react";
 import { getImageUrl } from "@/lib/imageHelper";
 import showToast from "@/lib/toast";
-import DropzoneVideoUpload from "@/components/DropzoneVideoUpload";
+// import DropzoneVideoUpload from "@/components/DropzoneVideoUpload";
 
 export default function AdminCourseContentManage() {
   const { courseId } = useParams();
@@ -410,12 +410,12 @@ export default function AdminCourseContentManage() {
                   </label>
                   
                   {/* Dropzone for large video uploads */}
-                  <DropzoneVideoUpload
+                  {/* <DropzoneVideoUpload
                     courseId={courseId}
                     contentId={editingId}
                     onUploadComplete={handleDropzoneUploadComplete}
                     onUploadError={handleDropzoneUploadError}
-                  />
+                  /> */}
 
                   {/* Fallback: Traditional file input for small videos */}
                   <div className="mt-4">

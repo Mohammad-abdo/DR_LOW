@@ -198,7 +198,7 @@ export default function Login() {
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     className="w-full pl-10 pr-4 py-3 rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-                    placeholder="admin@lms.edu.kw"
+                    placeholder="write your email"
                   />
                 </div>
               </motion.div>
@@ -245,11 +245,7 @@ export default function Login() {
                   <option value="ADMIN">{language === 'ar' ? 'مدير' : 'Admin'}</option>
                   <option value="TEACHER">{language === 'ar' ? 'معلم' : 'Teacher'}</option>
                 </select>
-                <p className="text-xs text-muted-foreground">
-                  {language === 'ar' 
-                    ? 'الطلاب: يرجى استخدام صفحة تسجيل الدخول الخاصة بالطلاب'
-                    : 'Students: Please use the student login page'}
-                </p>
+               
               </motion.div>
 
               <motion.button
@@ -292,7 +288,7 @@ export default function Login() {
                   </p>
                 </div>
               )}
-              <div className="text-center text-sm text-muted-foreground">
+              {/* <div className="text-center text-sm text-muted-foreground">
                 <p>{language === 'ar' ? 'بيانات الدخول الافتراضية' : 'Default Credentials'}</p>
                 <div className="font-mono text-xs mt-2 space-y-1">
                   <p><strong>Admin:</strong> admin@lms.edu.kw / admin123</p>
@@ -303,7 +299,7 @@ export default function Login() {
                     ? 'الطلاب: استخدم /student/login'
                     : 'Students: Use /student/login'}
                 </p>
-              </div>
+              </div> */}
             </motion.div>
           </CardContent>
         </Card>

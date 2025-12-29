@@ -319,29 +319,67 @@ export default function Learning() {
                     ref={videoRef}
                     key={`video-${currentContent.id}`}
                     src={getVideoUrl(currentContent.videoUrl)}
-                    className="w-full h-full"
+                    className="w-full h-full object-contain"
                     onPlay={() => setPlaying(true)}
                     onPause={() => setPlaying(false)}
                     onError={(e) => {
                       // Suppress console errors - only show user-friendly message once
                       if (!e.target.dataset.errorShown) {
                         e.target.dataset.errorShown = 'true';
-                        showToast.error(language === "ar" ? "الفيديو غير متاح حالياً" : "Video not available at the moment");
+                        const error = e.target.error;
+                        let errorMessage = language === "ar" ? "الفيديو غير متاح حالياً" : "Video not available at the moment";
+                        
+                        if (error) {
+                          switch (error.code) {
+                            case error.MEDIA_ERR_ABORTED:
+                              errorMessage = language === "ar" ? "تم إلغاء تحميل الفيديو" : "Video loading aborted";
+                              break;
+                            case error.MEDIA_ERR_NETWORK:
+                              errorMessage = language === "ar" ? "خطأ في الشبكة أثناء تحميل الفيديو" : "Network error while loading video";
+                              break;
+                            case error.MEDIA_ERR_DECODE:
+                              errorMessage = language === "ar" ? "خطأ في فك تشفير الفيديو" : "Error decoding video";
+                              break;
+                            case error.MEDIA_ERR_SRC_NOT_SUPPORTED:
+                              errorMessage = language === "ar" ? "تنسيق الفيديو غير مدعوم" : "Video format not supported";
+                              break;
+                          }
+                        }
+                        
+                        console.error("Video error:", {
+                          code: error?.code,
+                          message: errorMessage,
+                          videoUrl: currentContent.videoUrl,
+                          fullUrl: getVideoUrl(currentContent.videoUrl)
+                        });
+                        
+                        showToast.error(errorMessage);
                       }
                     }}
                     onLoadedMetadata={() => {
                       console.log("✅ Video loaded successfully:", {
                         videoUrl: currentContent.videoUrl,
                         fullUrl: getVideoUrl(currentContent.videoUrl),
-                        contentId: currentContent.id
+                        contentId: currentContent.id,
+                        duration: videoRef.current?.duration
                       });
                       if (videoRef.current?.duration && !isNaN(videoRef.current.duration)) {
                         setVideoDuration(videoRef.current.duration);
                       }
                     }}
+                    onCanPlay={() => {
+                      console.log("✅ Video can play:", {
+                        readyState: videoRef.current?.readyState,
+                        networkState: videoRef.current?.networkState
+                      });
+                    }}
                     controls
                     preload="metadata"
+                    playsInline
+                    webkit-playsinline="true"
+                    x5-playsinline="true"
                     crossOrigin="anonymous"
+                    controlsList="nodownload"
                   />
                   
                   {/* Video Controls */}

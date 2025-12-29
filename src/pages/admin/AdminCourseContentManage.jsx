@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Plus, Edit, Trash2, Save, Loader2, Video, FileText, X, ClipboardList } from "lucide-react";
-import { getImageUrl } from "@/lib/imageHelper";
+import { getImageUrl, getVideoUrl } from "@/lib/imageHelper";
 import showToast from "@/lib/toast";
 // import DropzoneVideoUpload from "@/components/DropzoneVideoUpload";
 
@@ -138,6 +138,20 @@ export default function AdminCourseContentManage() {
         allContent = allContent.sort((a, b) => (a.order || 0) - (b.order || 0));
         console.log("Final Content List:", allContent);
         console.log("Total content items:", allContent.length);
+        
+        // Log video URLs for debugging
+        const videoItems = allContent.filter(item => item.type === 'VIDEO');
+        console.log("Video items found:", videoItems.length);
+        videoItems.forEach((item, index) => {
+          console.log(`Video ${index + 1}:`, {
+            id: item.id,
+            title: item.titleEn || item.titleAr,
+            videoUrl: item.videoUrl,
+            hasVideoUrl: !!item.videoUrl,
+            videoUrlType: typeof item.videoUrl
+          });
+        });
+        
         setContentItems(allContent);
       }
     } catch (error) {
@@ -257,7 +271,7 @@ export default function AdminCourseContentManage() {
     setShowForm(true);
     setVideoFile(null);
     setFileFile(null);
-    setVideoPreview(item.videoUrl ? getImageUrl(item.videoUrl) : null);
+    setVideoPreview(item.videoUrl ? getVideoUrl(item.videoUrl) : null);
   };
 
   const handleDelete = async (id) => {
@@ -707,9 +721,36 @@ export default function AdminCourseContentManage() {
                         {language === "ar" ? item.descriptionAr : item.descriptionEn}
                       </p>
                     )}
-                    {item.videoUrl && (
+                    {item.type === "VIDEO" && item.videoUrl && (
                       <div className="mt-2">
-                        <video src={getImageUrl(item.videoUrl)} controls className="w-full max-w-md rounded" />
+                        <video 
+                          src={getVideoUrl(item.videoUrl)} 
+                          controls 
+                          className="w-full max-w-md rounded"
+                          preload="metadata"
+                          playsInline
+                          onError={(e) => {
+                            console.error("Video error:", {
+                              videoUrl: item.videoUrl,
+                              fullUrl: getVideoUrl(item.videoUrl),
+                              error: e.target.error
+                            });
+                          }}
+                          onLoadedMetadata={() => {
+                            console.log("Video loaded:", {
+                              videoUrl: item.videoUrl,
+                              fullUrl: getVideoUrl(item.videoUrl)
+                            });
+                          }}
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {item.videoUrl}
+                        </p>
+                      </div>
+                    )}
+                    {item.type === "VIDEO" && !item.videoUrl && (
+                      <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
+                        {language === "ar" ? "⚠️ لا يوجد فيديو مرفوع" : "⚠️ No video uploaded"}
                       </div>
                     )}
                     {item.fileUrl && (

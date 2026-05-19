@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "start": "npx serve -s dist -l $PORT"و
+    "start": "npx serve -s dist -l $PORT",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest",

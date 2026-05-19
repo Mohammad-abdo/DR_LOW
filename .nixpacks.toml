@@ -1,2 +1,2 @@
 [start]
-cmd = "npx serve -s dist -l 5008"
+cmd = "npx serve -s dist -l 8000"
